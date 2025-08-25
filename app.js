@@ -356,27 +356,8 @@ function computeAutopsyPosteriors(prior0, Avals, useB){
 
 
 /* (Legacy helpers retained; Harmonize tab removed) */
-function seSpFromLR(LRp, LRn){
-  const den = (LRn - LRp);
-  if (Math.abs(den) < 1e-9) return {error:"Invalid LRs (den≈0)"};
-  let sp = (1 - LRp) / den;
-  let se = 1 - LRn * sp;
-  return {se, sp};
-}
-function bridgeToAutopsy_fromLR(LRp, LRn, seP, spP, prev){
-  const m = seSpFromLR(LRp, LRn);
-  if (m.error) return {error:m.error};
-  const a = Math.max(0, Math.min(1, m.se));
-  const b = Math.max(0, Math.min(1, m.sp));
-  const u = petPPV(seP, spP, prev), v = petNPV(seP, spP, prev);
-  const det = u + v - 1; if (det <= 0) return {error:"Invalid PET inputs (u+v-1 ≤ 0)"};
-  const A = a - 1 + u, B = b - 1 + v;
-  let se = (A*v + (1-u)*B) / det, sp = (u*B + (1-v)*A) / det;
-  let warn=false; if (se<0||se>1||sp<0||sp>1){ warn=true; }
-  se = Math.max(1e-3, Math.min(0.999, se));
-  sp = Math.max(1e-3, Math.min(0.999, sp));
-  return { se, sp, lrpos: se/(1-sp), lrneg:(1-se)/sp, warn };
-}
+
+
 // Bridge tab utilities (optional)
 function doBridge(which){
   const seP = Number(document.getElementById("pet_se").value||0.92);
