@@ -116,6 +116,17 @@ function updateAutoPrior(){
 
 // As-entered Diagnostic calc + PPV/NPV
 function lrForCategory(cat,vals){ return cat==="pos"?vals.pos : (cat==="indet"?vals.indet : vals.neg); }
+
+// Autopsy-specific chip labels
+function labelAutopsy(p){
+  // label text only (chip color still driven by bucket from interpretP)
+  if (!isFinite(p)) return "—";
+  if (p >= 0.90) return "High probability of autopsy A+";
+  if (p >= 0.70) return "Likely autopsy A+";
+  if (p <= 0.10) return "Low probability of autopsy A+";
+  if (p <= 0.30) return "Likely autopsy A−";
+  return "Indeterminate on autopsy scale";
+}
 function interpretP(p){ if(p>=0.90) return ["high","High likelihood of PET positivity"]; if(p>=0.70) return ["likely","Likely PET positivity"]; if(p>0.30) return ["mid","Indeterminate range"]; if(p>0.10) return ["low","Likely PET negative"]; return ["low","Low probability"]; }
 function setChip(elId, bucket, label){ const el=document.getElementById(elId); if(!el) return; el.className="chip " + bucket; el.textContent = label; }
 

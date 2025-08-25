@@ -232,6 +232,15 @@
     </div>
 
     <div class="row"><button class="btn" id="calc_prog">Compute projected risk</button></div>
+<div id="combo_caution" class="callout small">
+  <strong>Combining two tests:</strong> Bayes multiplication assumes the tests are
+  <em>conditionally independent given disease</em>. Many pairs are correlated (e.g., two amyloid assays,
+  two plasma tests, or PET plus a PET-referenced fluid test), which can overstate the evidence.
+  Prefer mixing <em>different axes or matrices</em> (e.g., plasma tau + CSF amyloid). If two tests are likely correlated,
+  consider <em>down-weighting</em> the second test (e.g., use an LR<sup>α</sup> with α≈0.6–0.8). Once PET is observed,
+  the PET layer is 100%/0% and the autopsy panel collapses to PET’s PPV/1−NPV; additional PET-referenced tests will not
+  change the autopsy posterior.
+</div>
 
     <div class="card result-card">
       <h3 class="h">Projection</h3>
