@@ -231,41 +231,66 @@ function autopsyPosteriorFromAthenB(priorD, seP, spP, A, B){
 function computeAutopsyPosteriors(prior0, Avals, useB){
   const seP = Number(document.getElementById("pet_se_dx").value||0.92);
   const spP = Number(document.getElementById("pet_sp_dx").value||0.90);
-  const prev= Number(document.getElementById("pet_prev_dx").value||0.50); // kept for display consistency
+  const prev= Number(document.getElementById("pet_prev_dx").value||0.50);
 
-  // A as-entered LRs (vs PET)
+  const modA = document.getElementById("modA").value;
+  const modB = document.getElementById("modB").value;
+
+  const ppv = petPPV(seP, spP, prior0);
+  const npv = petNPV(seP, spP, prior0);
+
+  function renderA(p, msg){
+    document.getElementById("post_aut_p1").textContent = `Posterior P(A+) = ${fmtPct(p)}`;
+    document.getElementById("post_aut_details1").innerHTML = msg;
+    const [b,l] = interpretP(p); setChip("chip_aut1", b, l);
+    window.__POSTERIOR_AUTOPSY__ = p;
+  }
+  function renderAB(p, msg){
+    document.getElementById("post_aut_p2").textContent = `Posterior P(A+) = ${fmtPct(p)}`;
+    document.getElementById("post_aut_details2").innerHTML = msg;
+    const [b,l] = interpretP(p); setChip("chip_aut2", b, l);
+    window.__POSTERIOR_AUTOPSY__ = p;
+  }
+
+  // If Test A is PET itself, autopsy posterior collapses to PET's PPV / (1−NPV)
+  if (modA === "amyloid_pet") {
+    const pA = Avals.catA==="pos" ? ppv : (Avals.catA==="neg" ? (1-npv) : prior0);
+    renderA(pA, `PET observed. By definition: PET+ → PPV=${fmtPct(ppv)}, PET− → 1−NPV=${fmtPct(1-npv)} at prior ${fmtPct(prior0)}.`);
+    if (useB) {
+      // Once PET is known, PET-referenced tests can't move the autopsy posterior unless they have direct autopsy anchoring.
+      const msg = `PET already observed; additional PET-referenced tests do not change the autopsy posterior.`;
+      renderAB(pA, msg);
+    } else {
+      document.getElementById("post_aut_details2").innerHTML = "";
+    }
+    return;
+  }
+
+  // Otherwise, A is PET-referenced → use PET-mixture identity
   const resA = autopsyPosteriorFromB(prior0, seP, spP, Avals.lrA_pos, Avals.lrA_neg, Avals.catA);
+  renderA(resA.p,
+    `Mixture: P(PET+|A)×PPV + (1−P(PET+|A))×(1−NPV). Here P(PET+|A)=${(resA.q*100).toFixed(1)}%, PPV=${fmtPct(resA.ppv)}, NPV=${fmtPct(resA.npv)}.`);
 
-  // Render A autopsy posterior
-  document.getElementById("post_aut_p1").textContent = `Posterior P(A+) = ${fmtPct(resA.p)}`;
-  document.getElementById("post_aut_details1").innerHTML =
-    `Mixture: P(PET+|B)×PPV + (1−P(PET+|B))×(1−NPV). ` +
-    `Here P(PET+|B)=${(resA.q*100).toFixed(1)}%, PPV=${fmtPct(resA.ppv)}, ` +
-    `NPV=${fmtPct(resA.npv)}; bounded to [${fmtPct(resA.envelope[0])}, ${fmtPct(resA.envelope[1])}].`;
-  const [bucketA,labelA] = interpretP(resA.p);
-  setChip("chip_aut1", bucketA, labelA);
+  if (useB) {
+    const catB = document.getElementById("catB").value;
 
-  // Optional B
-  if(useB){
-    const lrB_pos = Number(document.getElementById("lrB_pos").value||1);
-    const lrB_neg = Number(document.getElementById("lrB_neg").value||1);
-    const catB    = document.getElementById("catB").value;
-    const A = { LRpos:Avals.lrA_pos, LRneg:Avals.lrA_neg, cat:Avals.catA };
-    const B = { LRpos:lrB_pos,       LRneg:lrB_neg,       cat:catB       };
-
-    const resAB = autopsyPosteriorFromAthenB(prior0, seP, spP, A, B);
-    document.getElementById("post_aut_p2").textContent = `Posterior P(A+) = ${fmtPct(resAB.p)}`;
-    document.getElementById("post_aut_details2").innerHTML =
-      `After A: update PET with B then mix with PET PPV/NPV at prior ${fmtPct(prior0)}; ` +
-      `bounded to [${fmtPct(resAB.envelope[0])}, ${fmtPct(resAB.envelope[1])}].`;
-    const [bucketB,labelB] = interpretP(resAB.p);
-    setChip("chip_aut2", bucketB, labelB);
-    window.__POSTERIOR_AUTOPSY__ = resAB.p;
+    if (modB === "amyloid_pet") {
+      // If B is PET, the chain collapses to PET PPV / (1−NPV)
+      const pAB = catB==="pos" ? ppv : (catB==="neg" ? (1-npv) : resA.p);
+      renderAB(pAB, `Second test is PET. Autopsy posterior collapses to PET: PET+ → PPV=${fmtPct(ppv)}, PET− → 1−NPV=${fmtPct(1-npv)}.`);
+    } else {
+      const lrB_pos = Number(document.getElementById("lrB_pos").value||1);
+      const lrB_neg = Number(document.getElementById("lrB_neg").value||1);
+      const A = { LRpos:Avals.lrA_pos, LRneg:Avals.lrA_neg, cat:Avals.catA };
+      const B = { LRpos:lrB_pos,       LRneg:lrB_neg,       cat:catB       };
+      const resAB = autopsyPosteriorFromAthenB(prior0, seP, spP, A, B);
+      renderAB(resAB.p, `After A→B: PET mixture bounded to [${fmtPct(resAB.envelope[0])}, ${fmtPct(resAB.envelope[1])}] at prior ${fmtPct(prior0)}.`);
+    }
   } else {
     document.getElementById("post_aut_details2").innerHTML = "";
-    window.__POSTERIOR_AUTOPSY__ = resA.p;
   }
 }
+
 
 /* --- Legacy helpers kept for the Harmonize Tools tab (do not use on Diagnostic) --- */
 function seSpFromLR(LRp, LRn){
