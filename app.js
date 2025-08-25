@@ -70,7 +70,7 @@ function updateAutoPrior(){
 
 // As-entered Diagnostic calc + PPV/NPV
 function lrForCategory(cat,vals){ return cat==="pos"?vals.pos : (cat==="indet"?vals.indet : vals.neg); }
-function interpretP(p){ if(p>=0.90) return ["high","High probability of Aβ positivity"]; if(p>=0.70) return ["likely","Likely Aβ positivity"]; if(p>0.30) return ["mid","Indeterminate range"]; if(p>0.10) return ["low","Likely Aβ negative"]; return ["low","Low probability"]; }
+function interpretP(p){ if(p>=0.90) return ["high","High likelihood of PET positivity"]; if(p>=0.70) return ["likely","Likely PET positivity"]; if(p>0.30) return ["mid","Indeterminate range"]; if(p>0.10) return ["low","Likely PET negative"]; return ["low","Low probability"]; }
 function setChip(elId, bucket, label){ const el=document.getElementById(elId); if(!el) return; el.className="chip " + bucket; el.textContent = label; }
 
 function computeDiagnostic(){
