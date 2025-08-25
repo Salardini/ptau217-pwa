@@ -325,23 +325,15 @@ function computeAutopsyPosteriors(prior0, Avals, useB){
   const catA = Avals.catA;
 
   function renderA(p,msg){
-  document.getElementById("post_aut_p1").textContent = `Posterior P(A+) = ${fmtPct(p)}`;
-  document.getElementById("post_aut_details1").innerHTML = msg;
-  setAutopsyChip("chip_aut1", p);
-  window.__POSTERIOR_AUTOPSY__ = p;
-}`;
+    document.getElementById("post_aut_p1").textContent = `Posterior P(A+) = ${fmtPct(p)}`;
     document.getElementById("post_aut_details1").innerHTML = msg;
-    const [b,l] = interpretP(p); /* replaced */
+    setAutopsyChip("chip_aut1", p);
     window.__POSTERIOR_AUTOPSY__ = p;
   }
   function renderAB(p,msg){
-  document.getElementById("post_aut_p2").textContent = `Posterior P(A+) = ${fmtPct(p)}`;
-  document.getElementById("post_aut_details2").innerHTML = msg;
-  setAutopsyChip("chip_aut2", p);
-  window.__POSTERIOR_AUTOPSY__ = p;
-}`;
+    document.getElementById("post_aut_p2").textContent = `Posterior P(A+) = ${fmtPct(p)}`;
     document.getElementById("post_aut_details2").innerHTML = msg;
-    const [b,l] = interpretP(p); /* replaced */
+    setAutopsyChip("chip_aut2", p);
     window.__POSTERIOR_AUTOPSY__ = p;
   }
 
