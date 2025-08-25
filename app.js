@@ -178,11 +178,96 @@ function computePrognostic(){
     `Mixture model: P(t)=P(A+)×[1−(1−h_A+)^t] + (1−P(A+))×[1−(1−h_A−)^t].`;
 }
 
-/* ---------- Autopsy harmonization core (also used in Bridge tab) ---------- */
-// PET PPV/NPV at given prevalence
+/* ---------- Autopsy harmonization core (MIXTURE method; bounded) ---------- */
+// PET PPV/NPV at given prevalence (derived from PET Se/Sp vs autopsy and clinical prevalence)
 function petPPV(se, sp, prev){ return (se*prev) / (se*prev + (1-sp)*(1-prev)); }
 function petNPV(se, sp, prev){ return (sp*(1-prev)) / ((1-se)*prev + sp*(1-prev)); }
-// LR -> Se/Sp (binary operating point)
+
+// Clinical PET prior at autopsy prevalence
+function priorPETfromD(pD, seP, spP){ return seP*pD + (1-spP)*(1-pD); }
+
+// Update PET probability with a blood LR (blood is referenced to PET)
+function posteriorPETprobGivenB(pP, LR){ const o = toOdds(pP); return fromOdds(o * LR); }
+
+// Autopsy posterior given ONE blood test (A) using the PET-mixture identity
+// Inputs: priorD = clinical prior for autopsy; seP,spP = PET vs autopsy; LRpos/LRneg = blood vs PET; cat ∈ {"pos","indet","neg"}
+function autopsyPosteriorFromB(priorD, seP, spP, LRpos, LRneg, cat){
+  const LR = cat==="pos" ? LRpos : (cat==="neg" ? LRneg : 1.0);
+
+  // 1) PET prior at the autopsy prevalence
+  const pP = priorPETfromD(priorD, seP, spP);
+
+  // 2) Blood→PET: q = P(PET+ | Blood)
+  const q = posteriorPETprobGivenB(pP, LR);
+
+  // 3) PET→Autopsy mixture (bounded by [1−NPV, PPV])
+  const ppv = petPPV(seP, spP, priorD);
+  const npv = petNPV(seP, spP, priorD);
+  const lo = 1 - npv, hi = ppv;
+  const p  = Math.max(lo, Math.min(hi, q*ppv + (1-q)*lo));
+
+  return { p, q, ppv, npv, envelope:[lo,hi], LR_used:LR };
+}
+
+// TWO blood tests A→B: update PET odds sequentially, then do the same PET mixture once
+// A and B are objects like: { LRpos, LRneg, cat }
+function autopsyPosteriorFromAthenB(priorD, seP, spP, A, B){
+  const LR_A = A.cat==="pos" ? A.LRpos : (A.cat==="neg" ? A.LRneg : 1.0);
+  const LR_B = B.cat==="pos" ? B.LRpos : (B.cat==="neg" ? B.LRneg : 1.0);
+
+  const pP0 = priorPETfromD(priorD, seP, spP);
+  const q1  = posteriorPETprobGivenB(pP0, LR_A);    // P(P+ | A)
+  const q2  = posteriorPETprobGivenB(q1,  LR_B);    // P(P+ | A,B)
+
+  const ppv = petPPV(seP, spP, priorD);
+  const npv = petNPV(seP, spP, priorD);
+  const lo = 1 - npv, hi = ppv;
+  const p  = Math.max(lo, Math.min(hi, q2*ppv + (1-q2)*lo));
+
+  return { p, q2, ppv, npv, envelope:[lo,hi] };
+}
+
+// Replace the old autopsy computation used on the Diagnostic page
+function computeAutopsyPosteriors(prior0, Avals, useB){
+  const seP = Number(document.getElementById("pet_se_dx").value||0.92);
+  const spP = Number(document.getElementById("pet_sp_dx").value||0.90);
+  const prev= Number(document.getElementById("pet_prev_dx").value||0.50); // kept for display consistency
+
+  // A as-entered LRs (vs PET)
+  const resA = autopsyPosteriorFromB(prior0, seP, spP, Avals.lrA_pos, Avals.lrA_neg, Avals.catA);
+
+  // Render A autopsy posterior
+  document.getElementById("post_aut_p1").textContent = `Posterior P(A+) = ${fmtPct(resA.p)}`;
+  document.getElementById("post_aut_details1").innerHTML =
+    `Mixture: P(PET+|B)×PPV + (1−P(PET+|B))×(1−NPV). ` +
+    `Here P(PET+|B)=${(resA.q*100).toFixed(1)}%, PPV=${fmtPct(resA.ppv)}, ` +
+    `NPV=${fmtPct(resA.npv)}; bounded to [${fmtPct(resA.envelope[0])}, ${fmtPct(resA.envelope[1])}].`;
+  const [bucketA,labelA] = interpretP(resA.p);
+  setChip("chip_aut1", bucketA, labelA);
+
+  // Optional B
+  if(useB){
+    const lrB_pos = Number(document.getElementById("lrB_pos").value||1);
+    const lrB_neg = Number(document.getElementById("lrB_neg").value||1);
+    const catB    = document.getElementById("catB").value;
+    const A = { LRpos:Avals.lrA_pos, LRneg:Avals.lrA_neg, cat:Avals.catA };
+    const B = { LRpos:lrB_pos,       LRneg:lrB_neg,       cat:catB       };
+
+    const resAB = autopsyPosteriorFromAthenB(prior0, seP, spP, A, B);
+    document.getElementById("post_aut_p2").textContent = `Posterior P(A+) = ${fmtPct(resAB.p)}`;
+    document.getElementById("post_aut_details2").innerHTML =
+      `After A: update PET with B then mix with PET PPV/NPV at prior ${fmtPct(prior0)}; ` +
+      `bounded to [${fmtPct(resAB.envelope[0])}, ${fmtPct(resAB.envelope[1])}].`;
+    const [bucketB,labelB] = interpretP(resAB.p);
+    setChip("chip_aut2", bucketB, labelB);
+    window.__POSTERIOR_AUTOPSY__ = resAB.p;
+  } else {
+    document.getElementById("post_aut_details2").innerHTML = "";
+    window.__POSTERIOR_AUTOPSY__ = resA.p;
+  }
+}
+
+/* --- Legacy helpers kept for the Harmonize Tools tab (do not use on Diagnostic) --- */
 function seSpFromLR(LRp, LRn){
   const den = (LRn - LRp);
   if (Math.abs(den) < 1e-9) return {error:"Invalid LRs (den≈0)"};
@@ -190,75 +275,20 @@ function seSpFromLR(LRp, LRn){
   let se = 1 - LRn * sp;
   return {se, sp};
 }
-// Bridge B vs PET → B vs autopsy (returns {se, sp, lrpos, lrneg, warn,...})
 function bridgeToAutopsy_fromLR(LRp, LRn, seP, spP, prev){
   const m = seSpFromLR(LRp, LRn);
   if (m.error) return {error:m.error};
-  const a = clamp(m.se, 0, 1), b = clamp(m.sp, 0, 1); // a=Se_{B|P}, b=Sp_{B|P}
+  const a = Math.max(0, Math.min(1, m.se));
+  const b = Math.max(0, Math.min(1, m.sp));
   const u = petPPV(seP, spP, prev), v = petNPV(seP, spP, prev);
-  const det = u + v - 1;
-  if (det <= 0) return {error:"Invalid PET inputs at this prevalence (u+v-1 ≤ 0)"};
+  const det = u + v - 1; if (det <= 0) return {error:"Invalid PET inputs (u+v-1 ≤ 0)"};
   const A = a - 1 + u, B = b - 1 + v;
-  let se = (A*v + (1-u)*B) / det;
-  let sp = (u*B + (1-v)*A) / det;
-  let warn=false;
-  if (se<0 || se>1 || sp<0 || sp>1){ warn=true; }
-  se = clamp(se, 1e-3, 0.999); sp = clamp(sp, 1e-3, 0.999);
-  const lrpos = se / (1 - sp);
-  const lrneg = (1 - se) / sp;
-  return {se, sp, lrpos, lrneg, ppvPET:u, npvPET:v, warn};
+  let se = (A*v + (1-u)*B) / det, sp = (u*B + (1-v)*A) / det;
+  let warn=false; if (se<0||se>1||sp<0||sp>1){ warn=true; }
+  se = Math.max(1e-3, Math.min(0.999, se));
+  sp = Math.max(1e-3, Math.min(0.999, sp));
+  return { se, sp, lrpos: se/(1-sp), lrneg:(1-se)/sp, warn };
 }
-
-// Inline autopsy-anchored posterior computation
-function computeAutopsyPosteriors(prior0, Avals, useB){
-  const seP = Number(document.getElementById("pet_se_dx").value||0.92);
-  const spP = Number(document.getElementById("pet_sp_dx").value||0.90);
-  const prev = Number(document.getElementById("pet_prev_dx").value||0.50);
-
-  // A → autopsy LRs
-  const outA = bridgeToAutopsy_fromLR(Avals.lrA_pos, Avals.lrA_neg, seP, spP, prev);
-  let msgWarn = outA.warn ? " (inputs inconsistent; clamped)" : "";
-  if(outA.error){
-    document.getElementById("post_aut_p1").textContent = "—";
-    document.getElementById("post_aut_details1").textContent = "Autopsy panel error: "+outA.error;
-    return;
-  }
-  const LR_A_aut = Avals.catA==="pos" ? outA.lrpos : (Avals.catA==="neg" ? outA.lrneg : 1.0);
-  const o0 = toOdds(prior0);
-  const p1_aut = fromOdds(o0 * LR_A_aut);
-  const [b1a,lab1a] = interpretP(p1_aut);
-  document.getElementById("post_aut_p1").textContent = `Posterior P(A+) = ${fmtPct(p1_aut)}`;
-  document.getElementById("post_aut_details1").innerHTML =
-    `Prior = ${fmtPct(prior0)} · LR<sub>A,autopsy</sub> = ${(LR_A_aut).toFixed(2)} (from LR+/LR− vs PET → autopsy)${msgWarn}`;
-  setChip("chip_aut1", b1a, lab1a);
-
-  // Optional B
-  if(useB){
-    const lrB_pos = Number(document.getElementById("lrB_pos").value||1);
-    const lrB_neg = Number(document.getElementById("lrB_neg").value||1);
-    const catB = document.getElementById("catB").value;
-    const outB = bridgeToAutopsy_fromLR(lrB_pos, lrB_neg, seP, spP, prev);
-    let msgWarnB = outB.warn ? " (inputs inconsistent; clamped)" : "";
-    if(outB.error){
-      document.getElementById("post_aut_p2").textContent = "—";
-      document.getElementById("post_aut_details2").textContent = "Autopsy panel error: "+outB.error;
-      window.__POSTERIOR_AUTOPSY__ = p1_aut;
-      return;
-    }
-    const LR_B_aut = catB==="pos" ? outB.lrpos : (catB==="neg" ? outB.lrneg : 1.0);
-    const p2_aut = fromOdds(toOdds(p1_aut) * LR_B_aut);
-    const [b2a,lab2a] = interpretP(p2_aut);
-    document.getElementById("post_aut_p2").textContent = `Posterior P(A+) = ${fmtPct(p2_aut)}`;
-    document.getElementById("post_aut_details2").innerHTML =
-      `Prior (after A) = ${fmtPct(p1_aut)} · LR<sub>B,autopsy</sub> = ${(LR_B_aut).toFixed(2)}${msgWarnB}`;
-    setChip("chip_aut2", b2a, lab2a);
-    window.__POSTERIOR_AUTOPSY__ = p2_aut;
-  } else {
-    document.getElementById("post_aut_details2").innerHTML = "";
-    window.__POSTERIOR_AUTOPSY__ = p1_aut;
-  }
-}
-
 // Bridge tab utilities (optional)
 function doBridge(which){
   const seP = Number(document.getElementById("pet_se").value||0.92);
