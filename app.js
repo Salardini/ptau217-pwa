@@ -411,9 +411,6 @@ document.getElementById("calc_dx").addEventListener("click", computeDiagnostic);
 ["age","stage","apoe"].forEach(id => document.getElementById(id).addEventListener("input", updateAutoPrior));
 document.getElementById("calc_prog").addEventListener("click", computePrognostic);
 
-document.getElementById("bridgeA").addEventListener("click",()=>doBridge("bridgeA"));
-document.getElementById("bridgeB").addEventListener("click",()=>doBridge("bridgeB"));
-document.getElementById("bridgeBoth").addEventListener("click",()=>{ doBridge("bridgeA"); doBridge("bridgeB"); });
 
 updateAutoPrior(); computeDiagnostic();
 

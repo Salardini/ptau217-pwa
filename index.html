@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
 <title>Bayesian Amyloid Helper</title>
 <link rel="manifest" href="manifest.webmanifest"/>
-<link rel="stylesheet" href="styles.css"/>
+<link rel="stylesheet" href="styles.css?v=207"/>
 </head>
 <body>
 <header class="header">
@@ -232,21 +232,6 @@
     </div>
 
     <div class="row"><button class="btn" id="calc_prog">Compute projected risk</button></div>
-<div class="row small" id="triage_controls" style="gap:10px;margin-top:6px">
-  <label class="small" for="triage_thresh" style="margin:0">Therapy triage cut-off (P(PET+))</label>
-  <input type="number" id="triage_thresh" value="0.80" min="0" max="1" step="0.01" style="width:110px">
-  <button class="btn secondary" id="triage_quick90" type="button" title="Set to 0.90">Quick: 0.90</button>
-</div>
-
-<div id="combo_caution" class="callout small">
-  <strong>Combining two tests:</strong> Bayes multiplication assumes the tests are
-  <em>conditionally independent given disease</em>. Many pairs are correlated (e.g., two amyloid assays,
-  two plasma tests, or PET plus a PET-referenced fluid test), which can overstate the evidence.
-  Prefer mixing <em>different axes or matrices</em> (e.g., plasma tau + CSF amyloid). If two tests are likely correlated,
-  consider <em>down-weighting</em> the second test (e.g., use an LR<sup>α</sup> with α≈0.6–0.8). Once PET is observed,
-  the PET layer is 100%/0% and the autopsy panel collapses to PET’s PPV/1−NPV; additional PET-referenced tests will not
-  change the autopsy posterior.
-</div>
 
     <div class="card result-card">
       <h3 class="h">Projection</h3>
@@ -254,9 +239,16 @@
       <div id="risk_chip" class="chip">—</div>
       <div class="small muted" id="prog_details"></div>
     </div>
+
+    <div class="callout small">Short-term, constant hazard assumption. For longer spans, use age-advancing hazards or cohort survival curves.</div>
   </section>
 
-  <div class="grid">
+  <!-- About -->
+  <section id="panel-about" class="tab card" style="display:none">
+    <h2 class="h section-gradient">About this tool</h2>
+    <!-- Updated 2025-08-25 with credits -->
+    
+    <div class="grid">
       <div class="card">
         <h3 class="h h-teal">What this tool does</h3>
         <p>Computes posterior probability of amyloid positivity using Bayes on odds, with up to two tests. Includes PPV/NPV at your prior and an autopsy panel that bridges PET-referenced LRs to the autopsy scale.</p>
@@ -270,12 +262,31 @@
         <p class="small">Let PET have Se<sub>P</sub>, Sp<sub>P</sub> vs autopsy. For a test B reported vs PET with LR<sub>+</sub>, LR<sub>−</sub> (thus Se<sub>B|P</sub>, Sp<sub>B|P</sub>), we solve for Se<sub>B</sub>, Sp<sub>B</sub> vs autopsy via PPV/NPV(PET) at a chosen prevalence and conditional independence (B ⟂ PET | disease). Then LR<sub>+</sub>=Se<sub>B</sub>/(1−Sp<sub>B</sub>), LR<sub>−</sub>=(1−Se<sub>B</sub>)/Sp<sub>B</sub>.</p>
       </div>
     </div>
+
+    <div class="callout small">
+      <strong>Combining two tests:</strong> Bayes multiplication assumes the tests are
+      <em>conditionally independent given disease</em>. Many pairs are correlated (e.g., two amyloid assays,
+      two plasma tests, or PET plus a PET-referenced fluid test), which can overstate the evidence.
+      Prefer mixing <em>different axes or matrices</em> (e.g., plasma tau + CSF amyloid). If two tests are likely correlated,
+      consider <em>down-weighting</em> the second test (e.g., use an LR<sup>α</sup> with α≈0.6–0.8). Once PET is observed,
+      the PET layer is 100%/0% and the autopsy panel collapses to PET's PPV/1−NPV; additional PET-referenced tests will not
+      change the autopsy posterior.
+    </div>
+
+    <div class="card">
+      <h3 class="h h-blue">Credits & Disclaimer</h3>
+      <p><strong>Made by Arash Salardini</strong><br>
+      Date: August 25, 2025<br>
+      <small class="muted">Version: 2025-08-25-v207</small></p>
+      
+      <p class="small muted"><strong>For educational purposes only.</strong> This tool is provided for educational and research purposes only and is not intended for clinical decision-making. Always consult with qualified healthcare professionals for medical advice and diagnosis. The calculations provided are based on literature values and may not reflect individual patient circumstances. The author assumes no responsibility for any decisions made based on the output of this tool.</p>
+    </div>
   </section>
 </main>
 
 <script>
 function showTab(which){
-  const ids = ['dx','prog','bridge','about'];
+  const ids = ['dx','prog','about'];
   ids.forEach(id=>{
     const p = document.getElementById('panel-'+id);
     const b = document.getElementById('tab'+id.charAt(0).toUpperCase()+id.slice(1));
