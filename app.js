@@ -17,40 +17,46 @@ const PRIOR_ANCHORS={"CN":{a50:0.10,a90:0.44},"SCD":{a50:0.12,a90:0.43},"MCI":{a
 // Library (illustrative defaults)
 
 
+
 const TEST_LIBRARY = {
-  // Imaging
+  // Imaging (ref autopsy)
   "amyloid_pet": {
     label: "Amyloid PET (visual; ref autopsy)",
     ref: "autopsy",
     se: 0.92, sp: 0.90,
+    // LR+ = Se/(1-Sp) = 0.92/0.10 = 9.20; LR- = (1-Se)/Sp = 0.08/0.90 = 0.089
     defaults: { pos: 9.20, indet: 1.00, neg: 0.089 }
   },
 
-  // CSF (PET-referenced)
+  // CSF (ref PET)
   "csf_abeta42_40_lumipulse": {
     label: "CSF Aβ42/40 (Lumipulse; ref PET)",
     ref: "PET",
     se: 0.92, sp: 0.93,
+    // LR+ = 0.92/0.07 = 13.14; LR- = 0.08/0.93 = 0.086
     defaults: { pos: 13.14, indet: 1.00, neg: 0.086 }
   },
   "csf_ptau181_abeta42_elecsys": {
     label: "CSF p-tau181/Aβ42 (Elecsys; ref PET)",
     ref: "PET",
     se: 0.91, sp: 0.89,
+    // LR+ = 0.91/0.11 = 8.27; LR- = 0.09/0.89 = 0.101
     defaults: { pos: 8.27, indet: 1.00, neg: 0.101 }
   },
 
-  // Plasma (PET-referenced)
+  // Plasma (ref PET)
   "plasma_abeta42_40_generic": {
     label: "Plasma Aβ42/40 (generic; ref PET)",
     ref: "PET",
     se: 0.85, sp: 0.85,
+    // LR+ = 0.85/0.15 = 5.67; LR- = 0.15/0.85 = 0.176
     defaults: { pos: 5.67, indet: 1.00, neg: 0.176 }
   },
   "plasma_ptau217_generic": {
     label: "Plasma p-tau217 (generic; ref PET)",
     ref: "PET",
     se: 0.92, sp: 0.94,
+    // illustrative strong defaults
     defaults: { pos: 15.33, indet: 1.00, neg: 0.085 }
   },
   "plasma_ptau217_abeta42_lumipulse": {
@@ -60,6 +66,7 @@ const TEST_LIBRARY = {
     defaults: { pos: 12.00, indet: 1.00, neg: 0.043 }
   }
 };
+
 
 
 
