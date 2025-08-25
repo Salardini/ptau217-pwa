@@ -309,16 +309,24 @@ function computeAutopsyPosteriors(prior0, Avals, useB){
   const modA = document.getElementById("modA").value;
   const catA = Avals.catA;
 
-  function renderA(p, msg){
-    document.getElementById("post_aut_p1").textContent = `Posterior P(A+) = ${fmtPct(p)}`;
+  function renderA(p,msg){
+  document.getElementById("post_aut_p1").textContent = `Posterior P(A+) = ${fmtPct(p)}`;
+  document.getElementById("post_aut_details1").innerHTML = msg;
+  setAutopsyChip("chip_aut1", p);
+  window.__POSTERIOR_AUTOPSY__ = p;
+}`;
     document.getElementById("post_aut_details1").innerHTML = msg;
-    const [b,l] = interpretP(p); setChip("chip_aut1", b, l);
+    const [b,l] = interpretP(p); /* replaced */
     window.__POSTERIOR_AUTOPSY__ = p;
   }
-  function renderAB(p, msg){
-    document.getElementById("post_aut_p2").textContent = `Posterior P(A+) = ${fmtPct(p)}`;
+  function renderAB(p,msg){
+  document.getElementById("post_aut_p2").textContent = `Posterior P(A+) = ${fmtPct(p)}`;
+  document.getElementById("post_aut_details2").innerHTML = msg;
+  setAutopsyChip("chip_aut2", p);
+  window.__POSTERIOR_AUTOPSY__ = p;
+}`;
     document.getElementById("post_aut_details2").innerHTML = msg;
-    const [b,l] = interpretP(p); setChip("chip_aut2", b, l);
+    const [b,l] = interpretP(p); /* replaced */
     window.__POSTERIOR_AUTOPSY__ = p;
   }
 
@@ -427,3 +435,9 @@ window.addEventListener("load", ()=>{
   if(a){ a.addEventListener("change", ()=>applyDefaultsFor("A")); applyDefaultsFor("A"); }
   if(b){ b.addEventListener("change", ()=>applyDefaultsFor("B")); }
 });
+
+function setAutopsyChip(id, p){
+  const [bucket, _] = interpretP(p);
+  const lab = labelAutopsy(p);
+  setChip(id, bucket, lab);
+}
