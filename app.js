@@ -15,14 +15,52 @@ const APOE_OR={"unknown":1.0,"e3e3":1.0,"e2e2":0.6,"e2e3":0.6,"e2e4":2.6,"e3e4":
 const PRIOR_ANCHORS={"CN":{a50:0.10,a90:0.44},"SCD":{a50:0.12,a90:0.43},"MCI":{a50:0.27,a90:0.71},"DEM":{a50:0.60,a90:0.85}};
 
 // Library (illustrative defaults)
+
 const TEST_LIBRARY = {
-  lumipulse_ratio: {label:"Plasma pTau217/Aβ42 (Lumipulse tri-band; ref PET/CSF)", defaults:{pos:14.51, indet:0.75, neg:0.07}},
-  ptau217_plasma: {label:"Plasma pTau217 (single marker; ref PET)",               defaults:{pos:5.9,   indet:1.0,  neg:0.21}},
-  abeta4240_plasma:{label:"Plasma Aβ42/Aβ40 (ref PET)",                           defaults:{pos:4.0,   indet:1.0,  neg:0.25}},
-  csf_ptau181_a42:{label:"CSF pTau181/Aβ42 (ref PET)",                             defaults:{pos:3.9,   indet:1.0,  neg:0.14}},
-  amyloid_pet:    {label:"Amyloid PET (visual; ref autopsy)",                      defaults:{pos:7.0,   indet:1.0,  neg:0.12}},
-  custom:         {label:"Custom (enter your own)",                                defaults:{pos:6.0,   indet:1.0,  neg:0.20}},
+  // PET (visual), referenced to autopsy (used for PET rule and PET-layer prior mapping)
+  "amyloid_pet": {
+    label: "Amyloid PET (visual; ref autopsy)",
+    ref: "autopsy",
+    se: 0.92, sp: 0.90,
+    defaults: { pos: 9.20, indet: 1.00, neg: 0.089 } // LR+≈Se/(1-Sp), LR-≈(1-Se)/Sp
+  },
+
+  // CSF assays (referenced to PET)
+  "csf_abeta42_40_lumipulse": {
+    label: "CSF Aβ42/40 (Lumipulse; ref PET)",
+    ref: "PET",
+    se: 0.92, sp: 0.93,
+    defaults: { pos: 13.14, indet: 1.00, neg: 0.086 } // LR+≈0.92/0.07, LR-≈0.08/0.93
+  },
+  "csf_ptau181_abeta42_elecsys": {
+    label: "CSF p-tau181/Aβ42 (Elecsys; ref PET)",
+    ref: "PET",
+    se: 0.91, sp: 0.89,
+    defaults: { pos: 8.27, indet: 1.00, neg: 0.101 } // LR+≈0.91/0.11, LR-≈0.09/0.89
+  },
+
+  // Plasma assays (referenced to PET; tune per specific platform if needed)
+  "plasma_abeta42_40_generic": {
+    label: "Plasma Aβ42/40 (generic; ref PET)",
+    ref: "PET",
+    se: 0.85, sp: 0.85,
+    defaults: { pos: 5.67, indet: 1.00, neg: 0.176 } // LR+≈0.85/0.15, LR-≈0.15/0.85
+  },
+  "plasma_ptau217_generic": {
+    label: "Plasma p-tau217 (generic; ref PET)",
+    ref: "PET",
+    se: 0.92, sp: 0.94,
+    defaults: { pos: 15.33, indet: 1.00, neg: 0.085 } // illustrative strong defaults (AUC~0.95-0.98 cohorts)
+  },
+  "plasma_ptau217_abeta42_lumipulse": {
+    label: "Plasma p-tau217/Aβ42 (Lumipulse; ref PET/CSF mixed)",
+    ref: "mixed",
+    // mixed reference in FDA summary; provide conservative defaults
+    se: 0.96, sp: 0.92,
+    defaults: { pos: 12.00, indet: 1.00, neg: 0.043 }
+  }
 };
+
 
 // Fill modality dropdowns
 function fillMods(sel){
@@ -363,3 +401,29 @@ document.getElementById("bridgeB").addEventListener("click",()=>doBridge("bridge
 document.getElementById("bridgeBoth").addEventListener("click",()=>{ doBridge("bridgeA"); doBridge("bridgeB"); });
 
 updateAutoPrior(); computeDiagnostic();
+
+// Apply defaults from TEST_LIBRARY into the LR inputs
+function applyDefaultsFor(prefix){
+  const modSel = document.getElementById(prefix==="A" ? "modA" : "modB");
+  const mod = modSel?.value;
+  const t = TEST_LIBRARY[mod];
+  if(!t) return;
+  const p = prefix;
+  const pos = document.getElementById(p==="A" ? "lrA_pos" : "lrB_pos");
+  const ind = document.getElementById(p==="A" ? "lrA_indet" : "lrB_indet");
+  const neg = document.getElementById(p==="A" ? "lrA_neg" : "lrB_neg");
+  if(pos) pos.value = (t.defaults?.pos ?? pos.value);
+  if(ind) ind.value = (t.defaults?.indet ?? ind.value);
+  if(neg) neg.value = (t.defaults?.neg ?? neg.value);
+  // annotate reference under the selector if there is a spot
+  const tag = document.getElementById(p==="A" ? "modA_ref" : "modB_ref");
+  if(tag) tag.textContent = t.ref ? `ref: ${t.ref}` : "";
+}
+
+// Hook up change listeners if present elements exist
+window.addEventListener("load", ()=>{
+  const a = document.getElementById("modA");
+  const b = document.getElementById("modB");
+  if(a){ a.addEventListener("change", ()=>applyDefaultsFor("A")); applyDefaultsFor("A"); }
+  if(b){ b.addEventListener("change", ()=>applyDefaultsFor("B")); }
+});
