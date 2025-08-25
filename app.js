@@ -7,6 +7,8 @@ addEventListener("online",updateOnline); addEventListener("offline",updateOnline
 // Utilities
 const clamp=(x,lo,hi)=>Math.max(lo,Math.min(hi,x));
 const toOdds=p=>p/(1-p), fromOdds=o=>o/(1+o);
+// Colour thresholds used for chip buckets (both PET and autopsy layers)
+const COLOR_THRESHOLDS = { green:0.90, amber:0.70, grey:0.30, red:0.10 };
 function lerp(x,x0,y0,x1,y1){ if(x<=x0)return y0; if(x>=x1)return y1; const t=(x-x0)/(x1-x0); return y0+t*(y1-y0); }
 function fmtPct(x){ if(!isFinite(x)) return "—"; const p=x*100; return p<0.1? p.toFixed(2)+"%": p.toFixed(1)+"%"; }
 
@@ -127,7 +129,18 @@ function labelAutopsy(p){
   if (p <= 0.30) return "Likely autopsy A−";
   return "Indeterminate on autopsy scale";
 }
-function interpretP(p){ if(p>=0.90) return ["high","High likelihood of PET positivity"]; if(p>=0.70) return ["likely","Likely PET positivity"]; if(p>0.30) return ["mid","Indeterminate range"]; if(p>0.10) return ["low","Likely PET negative"]; return ["low","Low probability"]; }
+
+function interpretP(p){
+  if(!isFinite(p)) return ["muted","—"];
+  const T = COLOR_THRESHOLDS;
+  // Map our logical bins to existing chip classes: green->"good", amber->"warn", red->"bad", grey->"muted"
+  if(p >= T.green) return ["good","High likelihood of PET positivity"];
+  if(p >= T.amber) return ["warn","Likely PET positivity"];
+  if(p <= T.red)   return ["bad","Low likelihood of PET positivity"];
+  if(p <= T.grey)  return ["warn","Likely PET negative"];
+  return ["muted","Indeterminate"];
+}
+
 function setChip(elId, bucket, label){ const el=document.getElementById(elId); if(!el) return; el.className="chip " + bucket; el.textContent = label; }
 
 
@@ -198,6 +211,7 @@ function computeDiagnostic(){
     const [b2,lab2] = interpretP(qAB); setChip("chip2", b2, lab2);
   } else {
     document.getElementById("post_details2").innerHTML = "";
+    showTriage("triage_flag2", qAB);
   }
 
   // Keep PET layer for reference
@@ -441,3 +455,45 @@ function setAutopsyChip(id, p){
   const lab = labelAutopsy(p);
   setChip(id, bucket, lab);
 }
+
+// --- Therapy triage helpers ---
+function getTriageCutoff(){
+  const el = document.getElementById("triage_thresh");
+  let v = el ? Number(el.value) : 0.80;
+  if(!isFinite(v) || v<=0 || v>=1) v = 0.80;
+  return v;
+}
+function triageFlag(prob){
+  const thr = getTriageCutoff();
+  return { meets: prob >= thr, thr };
+}
+function showTriage(id, prob){
+  const spanId = id; // use a pill appended to the details line
+  const thr = getTriageCutoff();
+  // ensure a span exists right after the details node
+  const details = document.getElementById(id.replace("triage_flag","post_details"));
+  let pill = document.getElementById(spanId);
+  if(!pill){
+    pill = document.createElement("span");
+    pill.id = spanId;
+    pill.className = "pill";
+    pill.style.marginLeft = "8px";
+    if(details) details.appendChild(pill);
+  }
+  if(prob >= thr){
+    pill.textContent = `Meets therapy triage (≥ ${Math.round(thr*100)}%)`;
+  } else {
+    pill.textContent = `Below triage (${Math.round(thr*100)}% cut-off)`;
+  }
+}
+window.addEventListener("load", ()=>{
+  const btn90 = document.getElementById("triage_quick90");
+  if(btn90){
+    btn90.addEventListener("click", ()=>{
+      const el = document.getElementById("triage_thresh");
+      if(el){ el.value = "0.90"; }
+      // recompute if possible
+      try{ computeDiagnostic(); }catch(e){}
+    });
+  }
+});
