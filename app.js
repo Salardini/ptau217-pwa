@@ -130,16 +130,17 @@ function labelAutopsy(p){
   return "Indeterminate on autopsy scale";
 }
 
+
 function interpretP(p){
   if(!isFinite(p)) return ["muted","—"];
   const T = COLOR_THRESHOLDS;
-  // Map our logical bins to existing chip classes: green->"good", amber->"warn", red->"bad", grey->"muted"
   if(p >= T.green) return ["good","High likelihood of PET positivity"];
   if(p >= T.amber) return ["warn","Likely PET positivity"];
   if(p <= T.red)   return ["bad","Low likelihood of PET positivity"];
   if(p <= T.grey)  return ["warn","Likely PET negative"];
   return ["muted","Indeterminate"];
 }
+
 
 function setChip(elId, bucket, label){ const el=document.getElementById(elId); if(!el) return; el.className="chip " + bucket; el.textContent = label; }
 
