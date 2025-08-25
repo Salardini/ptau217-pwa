@@ -73,103 +73,83 @@ function lrForCategory(cat,vals){ return cat==="pos"?vals.pos : (cat==="indet"?v
 function interpretP(p){ if(p>=0.90) return ["high","High likelihood of PET positivity"]; if(p>=0.70) return ["likely","Likely PET positivity"]; if(p>0.30) return ["mid","Indeterminate range"]; if(p>0.10) return ["low","Likely PET negative"]; return ["low","Low probability"]; }
 function setChip(elId, bucket, label){ const el=document.getElementById(elId); if(!el) return; el.className="chip " + bucket; el.textContent = label; }
 
+
 function computeDiagnostic(){
+  // Clinical prior (autopsy prevalence proxy used for PET PPV/NPV too)
   const p_auto = updateAutoPrior();
   const prior_override = document.getElementById("prior_override").value;
   const prior0 = prior_override ? clamp(Number(prior_override), 1e-6, 1-1e-6) : p_auto;
 
+  // PET Se/Sp used for PET-layer and autopsy layer
+  const seP = Number(document.getElementById("pet_se_dx")?.value || 0.92);
+  const spP = Number(document.getElementById("pet_sp_dx")?.value || 0.90);
+
   // Test A
-  const modA = document.getElementById("modA").value;
-  const catA = document.getElementById("catA").value;
-  const lrA_pos = Number(document.getElementById("lrA_pos").value||1);
-  const lrA_ind = Number(document.getElementById("lrA_indet").value||1);
-  const lrA_neg = Number(document.getElementById("lrA_neg").value||1);
-  const LR_A = lrForCategory(catA, {pos:lrA_pos, indet:lrA_ind, neg:lrA_neg});
+  const modA   = document.getElementById("modA").value;
+  const catA   = document.getElementById("catA").value;
+  const lrApos = Number(document.getElementById("lrA_pos").value||1);
+  const lrAind = Number(document.getElementById("lrA_indet").value||1);
+  const lrAneg = Number(document.getElementById("lrA_neg").value||1);
+  const LR_A   = (catA==="pos")?lrApos : (catA==="neg")?lrAneg : 1.0;
 
-  const showUncert = document.getElementById("uncert").checked;
-  let ciA = null;
-  if(showUncert){
-    const lib = TEST_LIBRARY[modA].defaults;
-    ciA = {pos:[lib.pos*0.65, lib.pos*1.55], indet:[0.8,1.25], neg:[lib.neg*0.5, lib.neg*1.5]}[catA];
-  }
+  // PET prior at this clinical prevalence: P(PET+)
+  const pP0 = seP*prior0 + (1-spP)*(1-prior0);
 
-  const o0 = toOdds(prior0);
-  const p1 = fromOdds(o0 * LR_A);
-  const p1lo = ciA ? fromOdds(o0 * ciA[0]) : null;
-  const p1hi = ciA ? fromOdds(o0 * ciA[1]) : null;
-
-  // Default "as-entered" display (P(A+))
-  const [b1,lab1] = interpretP(p1);
-  document.getElementById("post_p1").textContent = ciA ?
-    `Posterior P(A+) = ${fmtPct(p1)}  (≈ ${fmtPct(p1lo)} to ${fmtPct(p1hi)})` :
-    `Posterior P(A+) = ${fmtPct(p1)}`;
-  document.getElementById("post_details1").innerHTML =
-    `Prior = ${fmtPct(prior0)} · LR<sub>A</sub> = ${LR_A.toFixed(2)} → Bayes on odds.`;
-
-  // PPV/NPV *for Test A at this prior*
-  const ppvA = fromOdds(o0 * lrA_pos);
-  const npvA = 1 - fromOdds(o0 * lrA_neg);
-  document.getElementById("post_details1").innerHTML +=
-    `<br/><span class="muted">At prior ${fmtPct(prior0)} → PPV_A = ${fmtPct(ppvA)} · NPV_A = ${fmtPct(npvA)}</span>`;
-  setChip("chip1", b1, lab1);
-
-  // If A is PET, override the centered display to show P(PET+)=100%/0%
+  // PET layer after Test A
+  let qA;
   if (modA === "amyloid_pet") {
-    if (catA === "pos") {
-      document.getElementById("post_p1").textContent = `P(PET+) = 100.0%`;
-      document.getElementById("post_details1").innerHTML += `<br/><span class="muted">PET observed positive → P(PET+)=100% by definition; autopsy-anchored posterior is shown in the PET panel below.</span>`;
-    } else if (catA === "neg") {
-      document.getElementById("post_p1").textContent = `P(PET+) = 0.0%`;
-      document.getElementById("post_details1").innerHTML += `<br/><span class="muted">PET observed negative → P(PET+)=0% by definition; autopsy-anchored posterior is shown in the PET panel below.</span>`;
-    } else {
-      // Indeterminate PET (rare UI case) — leave the default P(A+) line
-    }
+    qA = (catA === "pos") ? 1.0 : (catA === "neg") ? 0.0 : pP0; // PET observed → 100%/0%
+  } else {
+    const oP0 = toOdds(pP0);
+    qA = fromOdds(oP0 * LR_A); // blood/CSF vs PET
   }
+
+  // TOP CARD: PET layer
+  document.getElementById("post_p1").textContent = `P(PET+) = ${fmtPct(qA)}`;
+  document.getElementById("post_details1").innerHTML =
+    (modA==="amyloid_pet")
+      ? `PET observed → P(PET+)=${fmtPct(qA)} by definition.`
+      : `Updated PET layer: prior P(PET+)=${fmtPct(pP0)}, LR_A=${LR_A.toFixed(2)} → P(PET+|A)=${fmtPct(qA)}.`;
+  const [b1,lab1] = interpretP(qA); setChip("chip1", b1, lab1);
 
   // Optional Test B
   const useB = document.getElementById("useB").value==="yes";
-  document.getElementById("comboBlock").style.display = useB ? "block" : "none";
-  document.getElementById("comboAutBlock").style.display = useB ? "block" : "none";
-  if(useB){
+  document.getElementById("comboBlock").style.display   = useB ? "block" : "none";
+  document.getElementById("comboAutBlock").style.display= useB ? "block" : "none";
+
+  let qAB = qA;
+  if (useB){
     const modB   = document.getElementById("modB").value;
     const catB   = document.getElementById("catB").value;
-    const lrB_pos = Number(document.getElementById("lrB_pos").value||1);
-    const lrB_ind = Number(document.getElementById("lrB_indet").value||1);
-    const lrB_neg = Number(document.getElementById("lrB_neg").value||1);
-    const LR_B = lrForCategory(catB, {pos:lrB_pos, indet:lrB_ind, neg:lrB_neg});
+    const lrBpos = Number(document.getElementById("lrB_pos").value||1);
+    const lrBind = Number(document.getElementById("lrB_indet").value||1);
+    const lrBneg = Number(document.getElementById("lrB_neg").value||1);
+    const LR_B   = (catB==="pos")?lrBpos : (catB==="neg")?lrBneg : 1.0;
 
-    const o1 = toOdds(p1);
-    const p2 = fromOdds(o1 * LR_B);
-    const [b2,lab2] = interpretP(p2);
-    document.getElementById("post_p2").textContent = `Posterior P(A+) = ${fmtPct(p2)}`;
-    document.getElementById("post_details2").innerHTML =
-      `Prior (after A) = ${fmtPct(p1)} · LR<sub>B</sub> = ${LR_B.toFixed(2)}.`;
-
-    const ppvB = fromOdds(o1 * lrB_pos);
-    const npvB = 1 - fromOdds(o1 * lrB_neg);
-    document.getElementById("post_details2").innerHTML +=
-      `<br/><span class="muted">At prior ${fmtPct(p1)} → PPV_B = ${fmtPct(ppvB)} · NPV_B = ${fmtPct(npvB)}</span>`;
-    setChip("chip2", b2, lab2);
-    window.__POSTERIOR__ = p2;
-
-    // If B is PET, override the centered A→B display to show PET certainty
     if (modB === "amyloid_pet") {
-      if (catB === "pos") {
-        document.getElementById("post_p2").textContent = `P(PET+) = 100.0%`;
-        document.getElementById("post_details2").innerHTML += `<br/><span class="muted">PET observed positive → P(PET+)=100% by definition; autopsy-anchored posterior is in the PET panel below.</span>`;
-      } else if (catB === "neg") {
-        document.getElementById("post_p2").textContent = `P(PET+) = 0.0%`;
-        document.getElementById("post_details2").innerHTML += `<br/><span class="muted">PET observed negative → P(PET+)=0% by definition; autopsy-anchored posterior is in the PET panel below.</span>`;
-      }
+      qAB = (catB === "pos") ? 1.0 : (catB === "neg") ? 0.0 : qA; // PET observed
+    } else {
+      const oQ = toOdds(qA);
+      qAB = fromOdds(oQ * LR_B); // sequential PET-layer update
     }
+
+    document.getElementById("post_p2").textContent = `P(PET+) = ${fmtPct(qAB)}`;
+    document.getElementById("post_details2").innerHTML =
+      (modB==="amyloid_pet")
+        ? `Second test PET observed → P(PET+)=${fmtPct(qAB)} by definition.`
+        : `Updated PET layer after B: prior P(PET+)=${fmtPct(qA)}, LR_B=${LR_B.toFixed(2)} → P(PET+|A,B)=${fmtPct(qAB)}.`;
+    const [b2,lab2] = interpretP(qAB); setChip("chip2", b2, lab2);
   } else {
     document.getElementById("post_details2").innerHTML = "";
-    window.__POSTERIOR__ = p1;
   }
 
-  // Compute autopsy-anchored posteriors (PET mixture logic / PET rule)
-  computeAutopsyPosteriors(prior0, {catA, lrA_pos, lrA_ind, lrA_neg}, useB);
+  // Keep PET layer for reference
+  window.__POSTERIOR__ = qAB;
+
+  // Compute the autopsy layer (PPV/1−NPV when PET observed; mixture otherwise)
+  computeAutopsyPosteriors(prior0, {catA, lrA_pos:lrApos, lrA_ind:lrAind, lrA_neg:lrAneg}, useB);
 }
+
 
 
 // Prognostic (prefer autopsy posterior if available)
@@ -260,16 +240,17 @@ function autopsyPosteriorFromAthenB(priorD, seP, spP, A, B){
 }
 
 // Replace the old autopsy computation used on the Diagnostic page
+
 function computeAutopsyPosteriors(prior0, Avals, useB){
-  const seP = Number(document.getElementById("pet_se_dx").value||0.92);
-  const spP = Number(document.getElementById("pet_sp_dx").value||0.90);
-  const prev= Number(document.getElementById("pet_prev_dx").value||0.50);
+  // PET Se/Sp and derived PPV/NPV at this prior
+  const seP = Number(document.getElementById("pet_se_dx")?.value || 0.92);
+  const spP = Number(document.getElementById("pet_sp_dx")?.value || 0.90);
+  const ppv = (seP*prior0) / (seP*prior0 + (1-spP)*(1-prior0));
+  const npv = (spP*(1-prior0)) / ((1-seP)*prior0 + spP*(1-prior0));
+  const lo  = 1 - npv, hi = ppv;
 
   const modA = document.getElementById("modA").value;
-  const modB = document.getElementById("modB").value;
-
-  const ppv = petPPV(seP, spP, prior0);
-  const npv = petNPV(seP, spP, prior0);
+  const catA = Avals.catA;
 
   function renderA(p, msg){
     document.getElementById("post_aut_p1").textContent = `Posterior P(A+) = ${fmtPct(p)}`;
@@ -284,44 +265,48 @@ function computeAutopsyPosteriors(prior0, Avals, useB){
     window.__POSTERIOR_AUTOPSY__ = p;
   }
 
-  // If Test A is PET itself, autopsy posterior collapses to PET's PPV / (1−NPV)
+  // If A is PET, collapse directly to PPV / (1−NPV)
   if (modA === "amyloid_pet") {
-    const pA = Avals.catA==="pos" ? ppv : (Avals.catA==="neg" ? (1-npv) : prior0);
-    renderA(pA, `PET observed. By definition: PET+ → PPV=${fmtPct(ppv)}, PET− → 1−NPV=${fmtPct(1-npv)} at prior ${fmtPct(prior0)}.`);
+    const pA = (catA==="pos") ? hi : (catA==="neg") ? lo : prior0;
+    renderA(pA, `PET observed. By definition: PET+ → PPV=${fmtPct(hi)}, PET− → 1−NPV=${fmtPct(lo)} at prior ${fmtPct(prior0)}.`);
     if (useB) {
-      // Once PET is known, PET-referenced tests can't move the autopsy posterior unless they have direct autopsy anchoring.
-      const msg = `PET already observed; additional PET-referenced tests do not change the autopsy posterior.`;
-      renderAB(pA, msg);
+      // Once PET known, PET-referenced tests cannot change the autopsy posterior
+      renderAB(pA, `PET already observed; additional PET-referenced tests do not change the autopsy posterior.`);
     } else {
       document.getElementById("post_aut_details2").innerHTML = "";
     }
     return;
   }
 
-  // Otherwise, A is PET-referenced → use PET-mixture identity
-  const resA = autopsyPosteriorFromB(prior0, seP, spP, Avals.lrA_pos, Avals.lrA_neg, Avals.catA);
-  renderA(resA.p,
-    `Mixture: P(PET+|A)×PPV + (1−P(PET+|A))×(1−NPV). Here P(PET+|A)=${(resA.q*100).toFixed(1)}%, PPV=${fmtPct(resA.ppv)}, NPV=${fmtPct(resA.npv)}.`);
+  // Otherwise A is PET-referenced → use PET mixture to autopsy
+  // Step 1: PET prior at this prior0
+  const pP0 = seP*prior0 + (1-spP)*(1-prior0);
+  // Step 2: P(PET+ | A)
+  const LR_A = (catA==="pos") ? Avals.lrA_pos : (catA==="neg") ? Avals.lrA_neg : 1.0;
+  const qA = fromOdds(toOdds(pP0) * LR_A);
+  // Step 3: mixture bounded to [1−NPV, PPV]
+  const pA_auto = Math.max(lo, Math.min(hi, qA*hi + (1-qA)*lo));
+  renderA(pA_auto, `Mixture: P(PET+|A)×PPV + (1−P(PET+|A))×(1−NPV). Here P(PET+|A)=${fmtPct(qA)}, PPV=${fmtPct(hi)}, NPV=${fmtPct(npv)}.`);
 
-  if (useB) {
+  if (useB){
+    const modB = document.getElementById("modB").value;
     const catB = document.getElementById("catB").value;
-
     if (modB === "amyloid_pet") {
-      // If B is PET, the chain collapses to PET PPV / (1−NPV)
-      const pAB = catB==="pos" ? ppv : (catB==="neg" ? (1-npv) : resA.p);
-      renderAB(pAB, `Second test is PET. Autopsy posterior collapses to PET: PET+ → PPV=${fmtPct(ppv)}, PET− → 1−NPV=${fmtPct(1-npv)}.`);
+      const pAB = (catB==="pos") ? hi : (catB==="neg") ? lo : pA_auto;
+      renderAB(pAB, `Second test is PET → autopsy posterior collapses to PET: PET+ → PPV=${fmtPct(hi)}, PET− → 1−NPV=${fmtPct(lo)}.`);
     } else {
       const lrB_pos = Number(document.getElementById("lrB_pos").value||1);
       const lrB_neg = Number(document.getElementById("lrB_neg").value||1);
-      const A = { LRpos:Avals.lrA_pos, LRneg:Avals.lrA_neg, cat:Avals.catA };
-      const B = { LRpos:lrB_pos,       LRneg:lrB_neg,       cat:catB       };
-      const resAB = autopsyPosteriorFromAthenB(prior0, seP, spP, A, B);
-      renderAB(resAB.p, `After A→B: PET mixture bounded to [${fmtPct(resAB.envelope[0])}, ${fmtPct(resAB.envelope[1])}] at prior ${fmtPct(prior0)}.`);
+      const LR_B = (catB==="pos")?lrB_pos : (catB==="neg")?lrB_neg : 1.0;
+      const qAB = fromOdds(toOdds(qA) * LR_B);
+      const pAB_auto = Math.max(lo, Math.min(hi, qAB*hi + (1-qAB)*lo));
+      renderAB(pAB_auto, `After A→B: mixture bounded to [${fmtPct(lo)}, ${fmtPct(hi)}] at prior ${fmtPct(prior0)}.`);
     }
   } else {
     document.getElementById("post_aut_details2").innerHTML = "";
   }
 }
+
 
 
 /* --- Legacy helpers kept for the Harmonize Tools tab (do not use on Diagnostic) --- */
