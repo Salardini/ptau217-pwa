@@ -76,7 +76,20 @@
       <div class="card">
         <h3 class="h h-violet">Test A</h3>
         <label>Modality</label>
-        <select id="modA"></select>
+        <select id="modA">
+<optgroup label="Imaging">
+        <option value="amyloid_pet">Amyloid PET (visual; ref autopsy)</option>
+      </optgroup>
+      <optgroup label="CSF">
+        <option value="csf_abeta42_40_lumipulse">CSF Aβ42/40 (Lumipulse; ref PET)</option>
+        <option value="csf_ptau181_abeta42_elecsys">CSF p-tau181/Aβ42 (Elecsys; ref PET)</option>
+      </optgroup>
+      <optgroup label="Plasma">
+        <option value="plasma_abeta42_40_generic">Plasma Aβ42/40 (generic; ref PET)</option>
+        <option value="plasma_ptau217_generic">Plasma p-tau217 (generic; ref PET)</option>
+        <option value="plasma_ptau217_abeta42_lumipulse">Plasma p-tau217/Aβ42 (Lumipulse; mixed ref)</option>
+      </optgroup>
+</select>
         <label>Result category</label>
         <select id="catA">
           <option value="pos">Positive</option>
@@ -100,7 +113,20 @@
         </select>
         <div id="panelB" style="display:none">
           <label>Modality</label>
-          <select id="modB"></select>
+          <select id="modB">
+<optgroup label="Imaging">
+        <option value="amyloid_pet">Amyloid PET (visual; ref autopsy)</option>
+      </optgroup>
+      <optgroup label="CSF">
+        <option value="csf_abeta42_40_lumipulse">CSF Aβ42/40 (Lumipulse; ref PET)</option>
+        <option value="csf_ptau181_abeta42_elecsys">CSF p-tau181/Aβ42 (Elecsys; ref PET)</option>
+      </optgroup>
+      <optgroup label="Plasma">
+        <option value="plasma_abeta42_40_generic">Plasma Aβ42/40 (generic; ref PET)</option>
+        <option value="plasma_ptau217_generic">Plasma p-tau217 (generic; ref PET)</option>
+        <option value="plasma_ptau217_abeta42_lumipulse">Plasma p-tau217/Aβ42 (Lumipulse; mixed ref)</option>
+      </optgroup>
+</select>
           <label>Result category</label>
           <select id="catB">
             <option value="pos">Positive</option>

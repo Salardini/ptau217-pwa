@@ -16,50 +16,51 @@ const PRIOR_ANCHORS={"CN":{a50:0.10,a90:0.44},"SCD":{a50:0.12,a90:0.43},"MCI":{a
 
 // Library (illustrative defaults)
 
+
 const TEST_LIBRARY = {
-  // PET (visual), referenced to autopsy (used for PET rule and PET-layer prior mapping)
+  // Imaging
   "amyloid_pet": {
     label: "Amyloid PET (visual; ref autopsy)",
     ref: "autopsy",
     se: 0.92, sp: 0.90,
-    defaults: { pos: 9.20, indet: 1.00, neg: 0.089 } // LR+≈Se/(1-Sp), LR-≈(1-Se)/Sp
+    defaults: { pos: 9.20, indet: 1.00, neg: 0.089 }
   },
 
-  // CSF assays (referenced to PET)
+  // CSF (PET-referenced)
   "csf_abeta42_40_lumipulse": {
     label: "CSF Aβ42/40 (Lumipulse; ref PET)",
     ref: "PET",
     se: 0.92, sp: 0.93,
-    defaults: { pos: 13.14, indet: 1.00, neg: 0.086 } // LR+≈0.92/0.07, LR-≈0.08/0.93
+    defaults: { pos: 13.14, indet: 1.00, neg: 0.086 }
   },
   "csf_ptau181_abeta42_elecsys": {
     label: "CSF p-tau181/Aβ42 (Elecsys; ref PET)",
     ref: "PET",
     se: 0.91, sp: 0.89,
-    defaults: { pos: 8.27, indet: 1.00, neg: 0.101 } // LR+≈0.91/0.11, LR-≈0.09/0.89
+    defaults: { pos: 8.27, indet: 1.00, neg: 0.101 }
   },
 
-  // Plasma assays (referenced to PET; tune per specific platform if needed)
+  // Plasma (PET-referenced)
   "plasma_abeta42_40_generic": {
     label: "Plasma Aβ42/40 (generic; ref PET)",
     ref: "PET",
     se: 0.85, sp: 0.85,
-    defaults: { pos: 5.67, indet: 1.00, neg: 0.176 } // LR+≈0.85/0.15, LR-≈0.15/0.85
+    defaults: { pos: 5.67, indet: 1.00, neg: 0.176 }
   },
   "plasma_ptau217_generic": {
     label: "Plasma p-tau217 (generic; ref PET)",
     ref: "PET",
     se: 0.92, sp: 0.94,
-    defaults: { pos: 15.33, indet: 1.00, neg: 0.085 } // illustrative strong defaults (AUC~0.95-0.98 cohorts)
+    defaults: { pos: 15.33, indet: 1.00, neg: 0.085 }
   },
   "plasma_ptau217_abeta42_lumipulse": {
-    label: "Plasma p-tau217/Aβ42 (Lumipulse; ref PET/CSF mixed)",
+    label: "Plasma p-tau217/Aβ42 (Lumipulse; mixed PET/CSF ref)",
     ref: "mixed",
-    // mixed reference in FDA summary; provide conservative defaults
     se: 0.96, sp: 0.92,
     defaults: { pos: 12.00, indet: 1.00, neg: 0.043 }
   }
 };
+
 
 
 // Fill modality dropdowns
