@@ -1,5 +1,5 @@
 
-const CACHE='amyloid-helper-v107';
+const CACHE='amyloid-helper-v200';
 const ASSETS=['./','./index.html','./styles.css','./app.js','./manifest.webmanifest'];
 self.addEventListener('install',e=>{e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS)));self.skipWaiting();});
 self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(keys=>Promise.all(keys.map(k=>k!==CACHE?caches.delete(k):null))));self.clients.claim();});
