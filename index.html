@@ -246,40 +246,60 @@
   <!-- About -->
   <section id="panel-about" class="tab card" style="display:none">
     <h2 class="h section-gradient">About this tool</h2>
-    <!-- Updated 2025-08-25 with credits -->
     
-    <div class="grid">
-      <div class="card">
-        <h3 class="h h-teal">What this tool does</h3>
-        <p>Computes posterior probability of amyloid positivity using Bayes on odds, with up to two tests. Includes PPV/NPV at your prior and an autopsy panel that bridges PET-referenced LRs to the autopsy scale.</p>
+    <!-- Overview -->
+    <div class="card">
+      <h3 class="h h-teal">What this tool does</h3>
+      <p>This Bayesian Amyloid Helper computes posterior probability of amyloid positivity using Bayes theorem on odds ratios. It supports sequential testing with up to two biomarker tests and provides both PET-referenced and autopsy-anchored probability estimates for clinical decision-making.</p>
+      
+      <h4 class="h small" style="margin-top: 16px;">Key Features:</h4>
+      <ul class="small">
+        <li>Age and APOE genotype-adjusted priors</li>
+        <li>Sequential Bayesian updating with likelihood ratios</li>
+        <li>Multiple biomarker modalities (PET, CSF, plasma)</li>
+        <li>Autopsy harmonization for cross-reference validity</li>
+        <li>Prognostic risk modeling with hazard functions</li>
+      </ul>
+    </div>
+
+    <!-- Mathematical Foundation -->
+    <div class="card">
+      <h3 class="h h-amber">Mathematical Foundation</h3>
+      <div style="background: rgba(255,255,255,0.05); padding: 12px; border-radius: 8px; margin: 8px 0;">
+        <p class="small" style="font-family: monospace; margin: 4px 0;">
+          <strong>Bayes on Odds:</strong><br>
+          prior_odds = p/(1−p)<br>
+          post_odds = prior_odds × LR<br>
+          post_p = post_odds/(1+post_odds)
+        </p>
       </div>
-      <div class="card">
-        <h3 class="h h-amber">Bayes (odds form)</h3>
-        <p class="small">prior_odds = p/(1−p) → post_odds = prior_odds × LR → post_p = post_odds/(1+post_odds).</p>
-      </div>
-      <div class="card">
-        <h3 class="h h-violet">Autopsy harmonization model</h3>
-        <p class="small">Let PET have Se<sub>P</sub>, Sp<sub>P</sub> vs autopsy. For a test B reported vs PET with LR<sub>+</sub>, LR<sub>−</sub> (thus Se<sub>B|P</sub>, Sp<sub>B|P</sub>), we solve for Se<sub>B</sub>, Sp<sub>B</sub> vs autopsy via PPV/NPV(PET) at a chosen prevalence and conditional independence (B ⟂ PET | disease). Then LR<sub>+</sub>=Se<sub>B</sub>/(1−Sp<sub>B</sub>), LR<sub>−</sub>=(1−Se<sub>B</sub>)/Sp<sub>B</sub>.</p>
+      <p class="small muted">Sequential testing multiplies likelihood ratios, assuming conditional independence given disease status.</p>
+    </div>
+
+    <!-- Usage Guidelines -->
+    <div class="card">
+      <h3 class="h h-green">Best Practices</h3>
+      <div class="callout small">
+        <strong>Combining tests:</strong> Bayes multiplication assumes tests are conditionally independent given disease. Many biomarker pairs are correlated (e.g., plasma tau + CSF tau), which can overstate evidence. Prefer mixing different pathways (e.g., plasma tau + CSF amyloid) or consider down-weighting correlated tests (LR<sup>α</sup> with α≈0.6–0.8).
       </div>
     </div>
 
-    <div class="callout small">
-      <strong>Combining two tests:</strong> Bayes multiplication assumes the tests are
-      <em>conditionally independent given disease</em>. Many pairs are correlated (e.g., two amyloid assays,
-      two plasma tests, or PET plus a PET-referenced fluid test), which can overstate the evidence.
-      Prefer mixing <em>different axes or matrices</em> (e.g., plasma tau + CSF amyloid). If two tests are likely correlated,
-      consider <em>down-weighting</em> the second test (e.g., use an LR<sup>α</sup> with α≈0.6–0.8). Once PET is observed,
-      the PET layer is 100%/0% and the autopsy panel collapses to PET's PPV/1−NPV; additional PET-referenced tests will not
-      change the autopsy posterior.
-    </div>
-
+    <!-- Credits & Legal -->
     <div class="card">
       <h3 class="h h-blue">Credits & Disclaimer</h3>
-      <p><strong>Made by Arash Salardini</strong><br>
-      Date: August 25, 2025<br>
-      <small class="muted">Version: 2025-08-25-v207</small></p>
+      <div style="border-left: 3px solid #6aa8ff; padding-left: 12px; margin: 12px 0;">
+        <p><strong>Made by Arash Salardini</strong><br>
+        <span class="small muted">August 25, 2025</span></p>
+      </div>
       
-      <p class="small muted"><strong>For educational purposes only.</strong> This tool is provided for educational and research purposes only and is not intended for clinical decision-making. Always consult with qualified healthcare professionals for medical advice and diagnosis. The calculations provided are based on literature values and may not reflect individual patient circumstances. The author assumes no responsibility for any decisions made based on the output of this tool.</p>
+      <div class="callout small" style="border-color: #ff6b6b;">
+        <strong>⚠️ For Educational Use Only</strong><br>
+        This tool is provided for educational and research purposes only and is not intended for clinical decision-making. Always consult qualified healthcare professionals for medical advice and diagnosis. Calculations are based on literature values and may not reflect individual patient circumstances. The author assumes no responsibility for decisions made based on this tool's output.
+      </div>
+      
+      <p class="small muted" style="text-align: center; margin-top: 16px;">
+        Version: 2025-08-25-v208 | Open source educational tool
+      </p>
     </div>
   </section>
 </main>
