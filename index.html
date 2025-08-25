@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+<title>pTau217/Aβ42 Bayesian Calculator</title>
+<link rel="manifest" href="manifest.webmanifest"/>
+<link rel="stylesheet" href="styles.css"/>
+</head>
+<body>
+<header class="header">
+  <div class="header-inner wrap">
+    <div class="brand">
+      <div class="logo">β</div>
+      <div class="title">
+        <div class="headline title-gradient">pTau217/Aβ<sub>42</sub> Bayesian</div>
+        <div class="sub muted">Diagnostic & Prognostic helper (client-side only)</div>
+      </div>
+    </div>
+    <span id="offline" class="offline">Offline</span>
+  </div>
+</header>
+
+<main class="main wrap">
+  <section class="card">
+    <h1 class="h">How to use</h1>
+    <ol class="steps">
+      <li><span class="step-title">Pick clinical context.</span> Choose age, baseline stage, and optional APOE.</li>
+      <li><span class="step-title">Select the test category.</span> Positive / Indeterminate / Negative based on your lab band.</li>
+      <li><span class="step-title">Review the posterior.</span> We apply Bayes on odds using FDA-cleared likelihood ratios.</li>
+      <li><span class="step-title">(Optional) Project short-term risk.</span> Use the Prognostic tab with editable hazards.</li>
+    </ol>
+    <p class="small muted">Notes: Priors approximate age×stage anchors; APOE modifies odds multiplicatively. Edit LRs/hazards to match your cohort if needed.</p>
+  </section>
+
+  <nav class="tabs">
+    <button class="tab-btn" id="tabDx" aria-selected="true" onclick="showTab('dx')">Diagnostic (Amyloid)</button>
+    <button class="tab-btn" id="tabProg" aria-selected="false" onclick="showTab('prog')">Prognostic (Conversion)</button>
+    <button class="tab-btn" id="tabAbout" aria-selected="false" onclick="showTab('about')">About & Methods</button>
+  </nav>
+
+  <!-- Diagnostic -->
+  <section id="panel-dx" class="tab card">
+    <h2 class="h section-gradient">Diagnostic: Posterior P(Aβ+)</h2>
+    <div class="grid">
+      <div class="card">
+        <h3 class="h h-blue">Clinical context</h3>
+        <label>Age (years)</label>
+        <input type="number" id="age" min="18" max="100" step="1" value="70">
+        <label>Baseline stage</label>
+        <select id="stage">
+          <option value="CN">Cognitively normal (CN)</option>
+          <option value="SCD">Subjective cognitive decline (SCD)</option>
+          <option value="MCI" selected>Mild cognitive impairment (MCI)</option>
+          <option value="DEM">Dementia (etiology uncertain)</option>
+        </select>
+        <label>APOE genotype (optional)</label>
+        <select id="apoe">
+          <option value="unknown" selected>Unknown / not tested</option>
+          <option value="e2e2">ε2/ε2</option>
+          <option value="e2e3">ε2/ε3</option>
+          <option value="e2e4">ε2/ε4</option>
+          <option value="e3e3">ε3/ε3</option>
+          <option value="e3e4">ε3/ε4</option>
+          <option value="e4e4">ε4/ε4</option>
+        </select>
+        <div class="help">The auto prior blends age×stage anchors; APOE is applied on the odds scale.</div>
+      </div>
+
+      <div class="card">
+        <h3 class="h h-violet">Assay summary (Lumipulse pTau217/Aβ<sub>42</sub>)</h3>
+        <label>Result category</label>
+        <select id="testcat">
+          <option value="neg">Negative (≤ 0.00370)</option>
+          <option value="indet">Indeterminate (0.00371–0.00737)</option>
+          <option value="pos" selected>Positive (≥ 0.00738)</option>
+        </select>
+
+        <div class="hr"></div>
+        <h4 class="h h-amber">Likelihood ratios (editable)</h4>
+        <div class="grid tight">
+          <div>
+            <label>LR<sub>+</sub> (Positive)</label>
+            <input type="number" id="lr_pos" value="10.68" step="0.01">
+            <div class="small muted">95% CI 6.90–16.79</div>
+          </div>
+          <div>
+            <label>LR (Indeterminate)</label>
+            <input type="number" id="lr_indet" value="0.96" step="0.01">
+            <div class="small muted">95% CI 0.67–1.36</div>
+          </div>
+          <div>
+            <label>LR<sub>-</sub> (Negative)</label>
+            <input type="number" id="lr_neg" value="0.03" step="0.001">
+            <div class="small muted">95% CI 0.01–0.06</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3 class="h h-teal">Prior control</h3>
+        <label>Auto prior (age×stage ± APOE)</label>
+        <input type="number" id="auto_prior" readonly value="0.700" />
+        <label>Override prior (0–1, optional)</label>
+        <input type="number" id="prior_override" min="0" max="1" step="0.001" placeholder="Leave blank to use auto prior">
+        <div class="help">If you have a cohort-specific prior, enter it here (as a probability).</div>
+      </div>
+    </div>
+
+    <div class="row">
+      <button class="btn" id="calc_dx">Compute posterior</button>
+      <label class="small"><input type="checkbox" id="uncert"> Show uncertainty (use LR 95% CIs)</label>
+    </div>
+
+    <div class="card result-card">
+      <h3 class="h">Posterior</h3>
+      <div id="post_p" class="result big-gradient">Posterior P(A+) —</div>
+      <div id="post_chip" class="chip">—</div>
+      <div class="small muted" id="post_details"></div>
+      <div class="callout small">Indeterminate band typically conveys minimal information (LR≈1); consider confirmatory testing or longitudinal follow-up.</div>
+    </div>
+  </section>
+
+  <!-- Prognostic -->
+  <section id="panel-prog" class="tab card" style="display:none">
+    <h2 class="h section-gradient">Prognostic: Short-horizon conversion risk</h2>
+    <p class="muted small">Mixture of constant annual hazards for A+ and A−, weighted by P(A+).</p>
+    <div class="grid">
+      <div class="card">
+        <h3 class="h h-blue">Inputs</h3>
+        <label>Use posterior from Diagnostic tab?</label>
+        <select id="use_posterior">
+          <option value="yes" selected>Yes — use P(A+)</option>
+          <option value="no">No — enter P(A+)</option>
+        </select>
+        <label>Manual P(A+) (if not using posterior)</label>
+        <input type="number" id="manual_pa" min="0" max="1" step="0.001" placeholder="e.g., 0.70">
+        <label>Baseline stage (prognosis)</label>
+        <select id="stage_prog">
+          <option value="CN">Cognitively normal (CN)</option>
+          <option value="MCI" selected>MCI</option>
+        </select>
+      </div>
+
+      <div class="card">
+        <h3 class="h h-violet">Annual conversion hazards (editable)</h3>
+        <div class="grid tight">
+          <div><label>CN: A+ annual hazard</label><input type="number" id="h_cn_pos" value="0.03" min="0" max="1" step="0.001"></div>
+          <div><label>CN: A− annual hazard</label><input type="number" id="h_cn_neg" value="0.01" min="0" max="1" step="0.001"></div>
+          <div><label>MCI: A+ annual hazard</label><input type="number" id="h_mci_pos" value="0.21" min="0" max="1" step="0.001"></div>
+          <div><label>MCI: A− annual hazard</label><input type="number" id="h_mci_neg" value="0.063" min="0" max="1" step="0.001"></div>
+        </div>
+        <div class="hr"></div>
+        <label>Time horizon (years)</label>
+        <input type="number" id="t_years" value="3" min="0.25" max="10" step="0.25">
+      </div>
+    </div>
+
+    <div class="row">
+      <button class="btn" id="calc_prog">Compute projected risk</button>
+    </div>
+
+    <div class="card result-card">
+      <h3 class="h">Projection</h3>
+      <div id="risk_out" class="result big-gradient">Projected risk —</div>
+      <div id="risk_chip" class="chip">—</div>
+      <div class="small muted" id="prog_details"></div>
+      <div class="callout small">Short-term assumption. For longer spans, consider age-advancing hazards or cohort survival curves.</div>
+    </div>
+  </section>
+
+  <!-- About -->
+  <section id="panel-about" class="tab card" style="display:none">
+    <h2 class="h section-gradient">About & Methods</h2>
+    <div class="grid">
+      <div class="card">
+        <h3 class="h h-teal">What this tool does</h3>
+        <p>Computes the posterior probability of amyloid positivity using Bayes on the odds scale, given your prior and assay likelihood ratio (LR). It then mixes A+ and A− conversion hazards to estimate short-term risk.</p>
+      </div>
+      <div class="card">
+        <h3 class="h h-amber">Bayes (odds form)</h3>
+        <p class="small">prior_odds = p/(1−p) → post_odds = prior_odds × LR → post_p = post_odds/(1+post_odds). APOE modifies odds via an OR.</p>
+      </div>
+      <div class="card">
+        <h3 class="h h-violet">Assumptions & caveats</h3>
+        <ul class="small">
+          <li>FDA-cleared LRs and cut points; specialized-care tool, not for screening.</li>
+          <li>Age×stage priors approximate literature; adjust to your cohort as needed.</li>
+          <li>All computation is client-side; no data leave your device.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script>
+function showTab(which){
+  const ids = ['dx','prog','about'];
+  ids.forEach(id=>{
+    const p = document.getElementById('panel-'+id);
+    const b = document.getElementById('tab'+id.charAt(0).toUpperCase()+id.slice(1));
+    if(!p||!b) return;
+    const on = (id===which);
+    p.style.display = on ? 'block' : 'none';
+    b.setAttribute('aria-selected', on ? 'true' : 'false');
+  });
+}
+// SW (works on localhost)
+if('serviceWorker' in navigator){ window.addEventListener('load',()=> navigator.serviceWorker.register('./sw.js')); }
+</script>
+<script src="app.js"></script>
+</body>
+</html>
