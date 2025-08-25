@@ -355,7 +355,7 @@ function computeAutopsyPosteriors(prior0, Avals, useB){
 
 
 
-/* --- Legacy helpers kept for the Harmonize Tools tab (do not use on Diagnostic) --- */
+/* (Legacy helpers retained; Harmonize tab removed) */
 function seSpFromLR(LRp, LRn){
   const den = (LRn - LRp);
   if (Math.abs(den) < 1e-9) return {error:"Invalid LRs (den≈0)"};

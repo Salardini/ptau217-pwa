@@ -36,7 +36,6 @@
   <nav class="tabs">
     <button class="tab-btn" id="tabDx" aria-selected="true" onclick="showTab('dx')">Diagnostic</button>
     <button class="tab-btn" id="tabProg" aria-selected="false" onclick="showTab('prog')">Prognostic</button>
-    <button class="tab-btn" id="tabBridge" aria-selected="false" onclick="showTab('bridge')">Harmonize (tools)</button>
     <button class="tab-btn" id="tabAbout" aria-selected="false" onclick="showTab('about')">About</button>
   </nav>
 
@@ -243,45 +242,6 @@
   </section>
 
   <!-- Harmonize tools tab (unchanged) -->
-  <section id="panel-bridge" class="tab card" style="display:none">
-    <h2 class="h section-gradient">Harmonize tests to autopsy (tools)</h2>
-    <p class="small muted">Use this tab for standalone conversions; the Diagnostic page already computes autopsy posteriors directly.</p>
-
-    <div class="grid">
-      <div class="card">
-        <h3 class="h h-blue">Reference: PET vs autopsy</h3>
-        <label>PET Sensitivity vs autopsy (Se<sub>P</sub>)</label>
-        <input type="number" id="pet_se" min="0" max="1" step="0.001" value="0.92">
-        <label>PET Specificity vs autopsy (Sp<sub>P</sub>)</label>
-        <input type="number" id="pet_sp" min="0" max="1" step="0.001" value="0.90">
-        <label>Prevalence used for bridging</label>
-        <input type="number" id="pet_prev" min="0.01" max="0.99" step="0.001" value="0.50">
-      </div>
-
-      <div class="card">
-        <h3 class="h h-violet">Test A reported vs PET</h3>
-        <div class="grid tight">
-          <div><label>LR<sub>+</sub> vs PET</label><input type="number" id="a_lrp" step="0.01" value="10.68"></div>
-          <div><label>LR<sub>-</sub> vs PET</label><input type="number" id="a_lrn" step="0.001" value="0.03"></div>
-        </div>
-        <div class="row"><button class="btn" id="bridgeA">Compute autopsy LRs → fill Test A</button></div>
-        <div class="small muted" id="bridgeA_out"></div>
-      </div>
-
-      <div class="card">
-        <h3 class="h h-amber">Test B reported vs PET</h3>
-        <div class="grid tight">
-          <div><label>LR<sub>+</sub> vs PET</label><input type="number" id="b_lrp" step="0.01" value="4.5"></div>
-          <div><label>LR<sub>-</sub> vs PET</label><input type="number" id="b_lrn" step="0.001" value="0.13"></div>
-        </div>
-        <div class="row"><button class="btn" id="bridgeB">Compute autopsy LRs → fill Test B</button></div>
-        <div class="small muted" id="bridgeB_out"></div>
-      </div>
-    </div>
-
-    <div class="row"><button class="btn" id="bridgeBoth">Compute autopsy LRs for A & B and fill both</button></div>
-  </section>
-
   <!-- About -->
   <section id="panel-about" class="tab card" style="display:none">
     <h2 class="h section-gradient">About & Methods</h2>
