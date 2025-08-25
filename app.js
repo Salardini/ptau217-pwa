@@ -14,7 +14,7 @@ function fmtPct(x){ if(!isFinite(x)) return "—"; const p=x*100; return p<0.1? 
 const APOE_OR={"unknown":1.0,"e3e3":1.0,"e2e2":0.6,"e2e3":0.6,"e2e4":2.6,"e3e4":3.5,"e4e4":12.0};
 const PRIOR_ANCHORS={"CN":{a50:0.10,a90:0.44},"SCD":{a50:0.12,a90:0.43},"MCI":{a50:0.27,a90:0.71},"DEM":{a50:0.60,a90:0.85}};
 
-// Library of modalities (defaults are illustrative; LR indeterminate ~1)
+// Library (illustrative defaults)
 const TEST_LIBRARY = {
   lumipulse_ratio: {label:"Plasma pTau217/Aβ42 (Lumipulse tri-band; ref PET/CSF)", defaults:{pos:14.51, indet:0.75, neg:0.07}},
   ptau217_plasma: {label:"Plasma pTau217 (single marker; ref PET)",               defaults:{pos:5.9,   indet:1.0,  neg:0.21}},
@@ -47,14 +47,15 @@ document.getElementById("modA").addEventListener("change",()=>setDefaults("A"));
 document.getElementById("modB").addEventListener("change",()=>setDefaults("B"));
 setDefaults("A"); setDefaults("B");
 
-// Toggle B panel
+// Toggle B panel (mirror for autopsy blocks too)
 document.getElementById("useB").addEventListener("change",(e)=>{
   const on = e.target.value==="yes";
   document.getElementById("panelB").style.display = on ? "block" : "none";
   document.getElementById("comboBlock").style.display = on ? "block" : "none";
+  document.getElementById("comboAutBlock").style.display = on ? "block" : "none";
 });
 
-// Prior
+// Prior helpers
 function priorFromAgeStage(age,stage){ const a=PRIOR_ANCHORS[stage]||PRIOR_ANCHORS["MCI"]; return clamp(lerp(age,50,a.a50,90,a.a90),0.01,0.99); }
 function applyAPOEonOdds(p,apoe){ const or=APOE_OR[apoe]??1.0; const o=toOdds(clamp(p,1e-6,1-1e-6)); return clamp(fromOdds(o*or),1e-6,1-1e-6); }
 function updateAutoPrior(){
@@ -67,12 +68,11 @@ function updateAutoPrior(){
 }
 ["age","stage","apoe"].forEach(id=>document.getElementById(id).addEventListener("input",updateAutoPrior));
 
-// Helpers
+// As-entered Diagnostic calc + PPV/NPV
 function lrForCategory(cat,vals){ return cat==="pos"?vals.pos : (cat==="indet"?vals.indet : vals.neg); }
 function interpretP(p){ if(p>=0.90) return ["high","High probability of Aβ positivity"]; if(p>=0.70) return ["likely","Likely Aβ positivity"]; if(p>0.30) return ["mid","Indeterminate range"]; if(p>0.10) return ["low","Likely Aβ negative"]; return ["low","Low probability"]; }
 function setChip(elId, bucket, label){ const el=document.getElementById(elId); if(!el) return; el.className="chip " + bucket; el.textContent = label; }
 
-// Diagnostic calculation + PPV/NPV
 function computeDiagnostic(){
   const p_auto = updateAutoPrior();
   const prior_override = document.getElementById("prior_override").value;
@@ -88,7 +88,6 @@ function computeDiagnostic(){
   const showUncert = document.getElementById("uncert").checked;
   let ciA = null;
   if(showUncert){
-    // crude generic CIs around defaults
     const modA = document.getElementById("modA").value;
     const lib = TEST_LIBRARY[modA].defaults;
     ciA = {pos:[lib.pos*0.65, lib.pos*1.55], indet:[0.8,1.25], neg:[lib.neg*0.5, lib.neg*1.5]}[catA];
@@ -103,15 +102,16 @@ function computeDiagnostic(){
   document.getElementById("post_p1").textContent = ciA ? `Posterior P(A+) = ${fmtPct(p1)}  (≈ ${fmtPct(p1lo)} to ${fmtPct(p1hi)})` : `Posterior P(A+) = ${fmtPct(p1)}`;
   document.getElementById("post_details1").innerHTML = `Prior = ${fmtPct(prior0)} · LR<sub>A</sub> = ${LR_A.toFixed(2)} → Bayes on odds.`;
 
-  // PPV/NPV at this prior (binary extremes)
+  // PPV/NPV at this prior
   const ppvA = fromOdds(o0 * lrA_pos);
   const npvA = 1 - fromOdds(o0 * lrA_neg);
-  document.getElementById("post_details1").innerHTML += `<br/><span class="muted">At prior ${fmtPct(prior0)} → PPV_A (if A+) = ${fmtPct(ppvA)} · NPV_A (if A−) = ${fmtPct(npvA)}</span>`;
+  document.getElementById("post_details1").innerHTML += `<br/><span class="muted">At prior ${fmtPct(prior0)} → PPV_A = ${fmtPct(ppvA)} · NPV_A = ${fmtPct(npvA)}</span>`;
   setChip("chip1", b1, lab1);
 
-  // Test B (optional)
+  // Optional Test B
   const useB = document.getElementById("useB").value==="yes";
   document.getElementById("comboBlock").style.display = useB ? "block" : "none";
+  document.getElementById("comboAutBlock").style.display = useB ? "block" : "none";
   if(useB){
     const catB = document.getElementById("catB").value;
     const lrB_pos = Number(document.getElementById("lrB_pos").value||1);
@@ -123,11 +123,11 @@ function computeDiagnostic(){
     const p2 = fromOdds(o1 * LR_B);
     const [b2,lab2] = interpretP(p2);
     document.getElementById("post_p2").textContent = `Posterior P(A+) = ${fmtPct(p2)}`;
-    document.getElementById("post_details2").innerHTML = `Posterior after A (${fmtPct(p1)}) becomes prior for B · LR<sub>B</sub> = ${LR_B.toFixed(2)}.`;
+    document.getElementById("post_details2").innerHTML = `Prior (after A) = ${fmtPct(p1)} · LR<sub>B</sub> = ${LR_B.toFixed(2)}.`;
 
     const ppvB = fromOdds(o1 * lrB_pos);
     const npvB = 1 - fromOdds(o1 * lrB_neg);
-    document.getElementById("post_details2").innerHTML += `<br/><span class="muted">At prior ${fmtPct(p1)} (after A) → PPV_B (if B+) = ${fmtPct(ppvB)} · NPV_B (if B−) = ${fmtPct(npvB)}</span>`;
+    document.getElementById("post_details2").innerHTML += `<br/><span class="muted">At prior ${fmtPct(p1)} → PPV_B = ${fmtPct(ppvB)} · NPV_B = ${fmtPct(npvB)}</span>`;
 
     setChip("chip2", b2, lab2);
     window.__POSTERIOR__ = p2;
@@ -135,15 +135,26 @@ function computeDiagnostic(){
     document.getElementById("post_details2").innerHTML = "";
     window.__POSTERIOR__ = p1;
   }
+
+  // Also compute autopsy-anchored posteriors (inline panel)
+  computeAutopsyPosteriors(prior0, {catA, lrA_pos, lrA_ind, lrA_neg}, useB);
 }
 
-// Prognostic
+// Prognostic (prefer autopsy posterior if available)
 function computePrognostic(){
+  const preferAutopsy = document.getElementById("prefer_autopsy").value === "yes";
   const usePosterior = document.getElementById("use_posterior").value === "yes";
-  const pa = usePosterior ? (window.__POSTERIOR__ ?? 0.5) : Number(document.getElementById("manual_pa").value || 0.5);
+  let pa = 0.5;
+  if(usePosterior){
+    pa = (preferAutopsy && typeof window.__POSTERIOR_AUTOPSY__ === "number")
+       ? window.__POSTERIOR_AUTOPSY__
+       : (typeof window.__POSTERIOR__ === "number" ? window.__POSTERIOR__ : 0.5);
+  } else {
+    pa = Number(document.getElementById("manual_pa").value || 0.5);
+  }
+
   const stage = document.getElementById("stage_prog").value;
   const t = Number(document.getElementById("t_years").value || 3);
-
   const h_cn_pos = Number(document.getElementById("h_cn_pos").value);
   const h_cn_neg = Number(document.getElementById("h_cn_neg").value);
   const h_mci_pos = Number(document.getElementById("h_mci_pos").value);
@@ -167,10 +178,11 @@ function computePrognostic(){
     `Mixture model: P(t)=P(A+)×[1−(1−h_A+)^t] + (1−P(A+))×[1−(1−h_A−)^t].`;
 }
 
-// ---------------- Harmonize to Autopsy (bridge) ----------------
+/* ---------- Autopsy harmonization core (also used in Bridge tab) ---------- */
+// PET PPV/NPV at given prevalence
 function petPPV(se, sp, prev){ return (se*prev) / (se*prev + (1-sp)*(1-prev)); }
 function petNPV(se, sp, prev){ return (sp*(1-prev)) / ((1-se)*prev + sp*(1-prev)); }
-// Convert LR+ and LR− (binary) into Se/Sp (assumes LR+=Se/(1-Sp), LR-=(1-Se)/Sp)
+// LR -> Se/Sp (binary operating point)
 function seSpFromLR(LRp, LRn){
   const den = (LRn - LRp);
   if (Math.abs(den) < 1e-9) return {error:"Invalid LRs (den≈0)"};
@@ -178,7 +190,7 @@ function seSpFromLR(LRp, LRn){
   let se = 1 - LRn * sp;
   return {se, sp};
 }
-// Bridge B vs PET → B vs autopsy
+// Bridge B vs PET → B vs autopsy (returns {se, sp, lrpos, lrneg, warn,...})
 function bridgeToAutopsy_fromLR(LRp, LRn, seP, spP, prev){
   const m = seSpFromLR(LRp, LRn);
   if (m.error) return {error:m.error};
@@ -197,6 +209,57 @@ function bridgeToAutopsy_fromLR(LRp, LRn, seP, spP, prev){
   return {se, sp, lrpos, lrneg, ppvPET:u, npvPET:v, warn};
 }
 
+// Inline autopsy-anchored posterior computation
+function computeAutopsyPosteriors(prior0, Avals, useB){
+  const seP = Number(document.getElementById("pet_se_dx").value||0.92);
+  const spP = Number(document.getElementById("pet_sp_dx").value||0.90);
+  const prev = Number(document.getElementById("pet_prev_dx").value||0.50);
+
+  // A → autopsy LRs
+  const outA = bridgeToAutopsy_fromLR(Avals.lrA_pos, Avals.lrA_neg, seP, spP, prev);
+  let msgWarn = outA.warn ? " (inputs inconsistent; clamped)" : "";
+  if(outA.error){
+    document.getElementById("post_aut_p1").textContent = "—";
+    document.getElementById("post_aut_details1").textContent = "Autopsy panel error: "+outA.error;
+    return;
+  }
+  const LR_A_aut = Avals.catA==="pos" ? outA.lrpos : (Avals.catA==="neg" ? outA.lrneg : 1.0);
+  const o0 = toOdds(prior0);
+  const p1_aut = fromOdds(o0 * LR_A_aut);
+  const [b1a,lab1a] = interpretP(p1_aut);
+  document.getElementById("post_aut_p1").textContent = `Posterior P(A+) = ${fmtPct(p1_aut)}`;
+  document.getElementById("post_aut_details1").innerHTML =
+    `Prior = ${fmtPct(prior0)} · LR<sub>A,autopsy</sub> = ${(LR_A_aut).toFixed(2)} (from LR+/LR− vs PET → autopsy)${msgWarn}`;
+  setChip("chip_aut1", b1a, lab1a);
+
+  // Optional B
+  if(useB){
+    const lrB_pos = Number(document.getElementById("lrB_pos").value||1);
+    const lrB_neg = Number(document.getElementById("lrB_neg").value||1);
+    const catB = document.getElementById("catB").value;
+    const outB = bridgeToAutopsy_fromLR(lrB_pos, lrB_neg, seP, spP, prev);
+    let msgWarnB = outB.warn ? " (inputs inconsistent; clamped)" : "";
+    if(outB.error){
+      document.getElementById("post_aut_p2").textContent = "—";
+      document.getElementById("post_aut_details2").textContent = "Autopsy panel error: "+outB.error;
+      window.__POSTERIOR_AUTOPSY__ = p1_aut;
+      return;
+    }
+    const LR_B_aut = catB==="pos" ? outB.lrpos : (catB==="neg" ? outB.lrneg : 1.0);
+    const p2_aut = fromOdds(toOdds(p1_aut) * LR_B_aut);
+    const [b2a,lab2a] = interpretP(p2_aut);
+    document.getElementById("post_aut_p2").textContent = `Posterior P(A+) = ${fmtPct(p2_aut)}`;
+    document.getElementById("post_aut_details2").innerHTML =
+      `Prior (after A) = ${fmtPct(p1_aut)} · LR<sub>B,autopsy</sub> = ${(LR_B_aut).toFixed(2)}${msgWarnB}`;
+    setChip("chip_aut2", b2a, lab2a);
+    window.__POSTERIOR_AUTOPSY__ = p2_aut;
+  } else {
+    document.getElementById("post_aut_details2").innerHTML = "";
+    window.__POSTERIOR_AUTOPSY__ = p1_aut;
+  }
+}
+
+// Bridge tab utilities (optional)
 function doBridge(which){
   const seP = Number(document.getElementById("pet_se").value||0.92);
   const spP = Number(document.getElementById("pet_sp").value||0.90);
@@ -206,8 +269,7 @@ function doBridge(which){
   const out = bridgeToAutopsy_fromLR(inpLRp, inpLRn, seP, spP, prev);
   const outEl = document.getElementById(which+"_out");
   if (out.error){ outEl.textContent = "Error: "+out.error; return; }
-  outEl.innerHTML = `Autopsy-anchored: Se=${(out.se).toFixed(3)}, Sp=${(out.sp).toFixed(3)} · LR+=${out.lrpos.toFixed(2)}, LR−=${out.lrneg.toFixed(3)} `+(out.warn?" (inputs inconsistent; clamped)":"");
-  // Fill corresponding test fields (indet ~ 1)
+  outEl.innerHTML = `Autopsy-anchored: Se=${(out.se).toFixed(3)}, Sp=${(out.sp).toFixed(3)} · LR+=${out.lrpos.toFixed(2)}, LR−=${out.lrneg.toFixed(3)} `+(out.warn?" (clamped)":"");
   if (which.startsWith("bridgeA")) {
     document.getElementById("lrA_pos").value = out.lrpos.toFixed(2);
     document.getElementById("lrA_neg").value = out.lrneg.toFixed(3);
@@ -219,12 +281,13 @@ function doBridge(which){
   }
 }
 
+// Wire up
+document.getElementById("calc_dx").addEventListener("click", computeDiagnostic);
+["age","stage","apoe"].forEach(id => document.getElementById(id).addEventListener("input", updateAutoPrior));
+document.getElementById("calc_prog").addEventListener("click", computePrognostic);
+
 document.getElementById("bridgeA").addEventListener("click",()=>doBridge("bridgeA"));
 document.getElementById("bridgeB").addEventListener("click",()=>doBridge("bridgeB"));
 document.getElementById("bridgeBoth").addEventListener("click",()=>{ doBridge("bridgeA"); doBridge("bridgeB"); });
 
-// Wire up main actions
-document.getElementById("calc_dx").addEventListener("click", computeDiagnostic);
-["age","stage","apoe"].forEach(id => document.getElementById(id).addEventListener("input", updateAutoPrior));
-document.getElementById("calc_prog").addEventListener("click", computePrognostic);
 updateAutoPrior(); computeDiagnostic();

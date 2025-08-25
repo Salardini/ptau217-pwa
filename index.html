@@ -28,17 +28,16 @@
       <li><span class="step-title">Set clinical context.</span> Choose age, stage, optional APOE.</li>
       <li><span class="step-title">Configure Test A.</span> Pick a modality & category (Pos/Indet/Neg), edit LRs if needed.</li>
       <li><span class="step-title">Optionally enable Test B.</span> Posterior from A becomes the prior for B.</li>
-      <li><span class="step-title">Optionally harmonize to autopsy.</span> Convert tests reported vs PET into autopsy-anchored LRs.</li>
-      <li><span class="step-title">Read results.</span> Posterior after A and after A→B, plus PPV/NPV lines.</li>
+      <li><span class="step-title">Autopsy panel.</span> We re-express your A/B LRs vs PET onto the autopsy scale and show an autopsy-anchored posterior.</li>
+      <li><span class="step-title">Prognosis.</span> By default, uses the autopsy-anchored posterior.</li>
     </ol>
-    <p class="small muted">Assumptions: LRs are assay/threshold specific. Sequential Bayes assumes conditional independence given disease. Client-side only.</p>
   </section>
 
   <nav class="tabs">
-    <button class="tab-btn" id="tabDx" aria-selected="true" onclick="showTab('dx')">Diagnostic (Two tests)</button>
+    <button class="tab-btn" id="tabDx" aria-selected="true" onclick="showTab('dx')">Diagnostic</button>
     <button class="tab-btn" id="tabProg" aria-selected="false" onclick="showTab('prog')">Prognostic</button>
-    <button class="tab-btn" id="tabBridge" aria-selected="false" onclick="showTab('bridge')">Harmonize to Autopsy</button>
-    <button class="tab-btn" id="tabAbout" aria-selected="false" onclick="showTab('about')">About & Methods</button>
+    <button class="tab-btn" id="tabBridge" aria-selected="false" onclick="showTab('bridge')">Harmonize (tools)</button>
+    <button class="tab-btn" id="tabAbout" aria-selected="false" onclick="showTab('about')">About</button>
   </nav>
 
   <!-- Diagnostic -->
@@ -66,9 +65,8 @@
           <option value="e3e4">ε3/ε4</option>
           <option value="e4e4">ε4/ε4</option>
         </select>
-        <div class="help">Auto prior uses age×stage anchors and adjusts odds by APOE.</div>
         <div class="hr"></div>
-        <h3 class="h h-teal">Prior control</h3>
+        <h3 class="h h-teal">Prior</h3>
         <label>Auto prior (read-only)</label>
         <input type="number" id="auto_prior" readonly value="0.700" />
         <label>Override prior (0–1, optional)</label>
@@ -91,7 +89,6 @@
           <div><label>LR<sub>-</sub> (A−)</label><input type="number" id="lrA_neg" step="0.001"></div>
         </div>
         <div class="row"><button class="btn" id="defaultsA">Reset Test A to defaults</button></div>
-        <div class="small muted">Defaults are illustrative; edit to match your assay/platform & threshold.</div>
       </div>
 
       <div class="card">
@@ -125,20 +122,48 @@
       <label class="small"><input type="checkbox" id="uncert"> Show uncertainty (Test A LR CIs only)</label>
     </div>
 
+    <!-- As-entered posteriors -->
     <div class="card result-card">
-      <h3 class="h">Posterior after Test A</h3>
+      <h3 class="h">Posterior after Test A (as-entered)</h3>
       <div id="post_p1" class="result big-gradient">—</div>
       <div id="chip1" class="chip">—</div>
       <div class="small muted" id="post_details1"></div>
     </div>
 
     <div id="comboBlock" class="card result-card" style="display:none">
-      <h3 class="h">Posterior after Test A → Test B</h3>
+      <h3 class="h">Posterior after Test A → Test B (as-entered)</h3>
       <div id="post_p2" class="result big-gradient">—</div>
       <div id="chip2" class="chip">—</div>
       <div class="small muted" id="post_details2"></div>
     </div>
-    <div class="callout small">Sequential Bayes assumes tests are independent given disease status; real-world correlation can attenuate LRs.</div>
+
+    <!-- Autopsy harmonization settings (inline) -->
+    <div class="card">
+      <h3 class="h h-teal">Autopsy harmonization (used to compute autopsy posterior)</h3>
+      <div class="grid tight">
+        <div><label>PET Sensitivity vs autopsy</label><input type="number" id="pet_se_dx" min="0" max="1" step="0.001" value="0.92"></div>
+        <div><label>PET Specificity vs autopsy</label><input type="number" id="pet_sp_dx" min="0" max="1" step="0.001" value="0.90"></div>
+        <div><label>Prevalence for bridging (match B’s cohort)</label><input type="number" id="pet_prev_dx" min="0.01" max="0.99" step="0.001" value="0.50"></div>
+      </div>
+      <div class="small muted">We re-express Test A/B LRs (typically reported vs PET) onto the autopsy scale using these values.</div>
+    </div>
+
+    <!-- Autopsy-anchored posteriors -->
+    <div class="card result-card">
+      <h3 class="h">Autopsy-anchored posterior after Test A</h3>
+      <div id="post_aut_p1" class="result big-gradient">—</div>
+      <div id="chip_aut1" class="chip">—</div>
+      <div class="small muted" id="post_aut_details1"></div>
+    </div>
+
+    <div id="comboAutBlock" class="card result-card" style="display:none">
+      <h3 class="h">Autopsy-anchored posterior after Test A → Test B</h3>
+      <div id="post_aut_p2" class="result big-gradient">—</div>
+      <div id="chip_aut2" class="chip">—</div>
+      <div class="small muted" id="post_aut_details2"></div>
+    </div>
+
+    <div class="callout small">Sequential Bayes assumes tests are independent given disease; correlation can attenuate effective LRs. Autopsy panel bridges PET-referenced LRs onto an autopsy reference.</div>
   </section>
 
   <!-- Prognostic -->
@@ -148,6 +173,11 @@
     <div class="grid">
       <div class="card">
         <h3 class="h h-blue">Inputs</h3>
+        <label>Prefer autopsy-anchored posterior (if available)?</label>
+        <select id="prefer_autopsy">
+          <option value="yes" selected>Yes — use autopsy posterior if present</option>
+          <option value="no">No — use as-entered posterior</option>
+        </select>
         <label>Use posterior from Diagnostic tab?</label>
         <select id="use_posterior">
           <option value="yes" selected>Yes — use P(A+)</option>
@@ -186,10 +216,10 @@
     </div>
   </section>
 
-  <!-- Harmonize to Autopsy -->
+  <!-- Harmonize tools tab (unchanged) -->
   <section id="panel-bridge" class="tab card" style="display:none">
-    <h2 class="h section-gradient">Harmonize tests to autopsy reference</h2>
-    <p class="small muted">Most plasma/CSF tests are reported vs PET; use this tool to re-express them vs autopsy (same footing as PET).</p>
+    <h2 class="h section-gradient">Harmonize tests to autopsy (tools)</h2>
+    <p class="small muted">Use this tab for standalone conversions; the Diagnostic page already computes autopsy posteriors directly.</p>
 
     <div class="grid">
       <div class="card">
@@ -198,9 +228,8 @@
         <input type="number" id="pet_se" min="0" max="1" step="0.001" value="0.92">
         <label>PET Specificity vs autopsy (Sp<sub>P</sub>)</label>
         <input type="number" id="pet_sp" min="0" max="1" step="0.001" value="0.90">
-        <label>Prevalence used for bridging (match cohort of the biomarker)</label>
+        <label>Prevalence used for bridging</label>
         <input type="number" id="pet_prev" min="0.01" max="0.99" step="0.001" value="0.50">
-        <div class="help">Bridging uses PPV/NPV derived from Se<sub>P</sub>, Sp<sub>P</sub>, and this prevalence.</div>
       </div>
 
       <div class="card">
@@ -225,7 +254,6 @@
     </div>
 
     <div class="row"><button class="btn" id="bridgeBoth">Compute autopsy LRs for A & B and fill both</button></div>
-    <div class="callout small">If inputs are incompatible (e.g., different spectrum/thresholds), results may be clamped to [0,1] and a warning shown.</div>
   </section>
 
   <!-- About -->
@@ -234,14 +262,14 @@
     <div class="grid">
       <div class="card">
         <h3 class="h h-teal">What this tool does</h3>
-        <p>Computes posterior probability of amyloid positivity using Bayes on odds, with up to two tests. Includes PPV/NPV at your chosen prior and a bridge to express PET-referenced tests on the autopsy scale.</p>
+        <p>Computes posterior probability of amyloid positivity using Bayes on odds, with up to two tests. Includes PPV/NPV at your prior and an autopsy panel that bridges PET-referenced LRs to the autopsy scale.</p>
       </div>
       <div class="card">
         <h3 class="h h-amber">Bayes (odds form)</h3>
         <p class="small">prior_odds = p/(1−p) → post_odds = prior_odds × LR → post_p = post_odds/(1+post_odds).</p>
       </div>
       <div class="card">
-        <h3 class="h h-violet">Harmonization model</h3>
+        <h3 class="h h-violet">Autopsy harmonization model</h3>
         <p class="small">Let PET have Se<sub>P</sub>, Sp<sub>P</sub> vs autopsy. For a test B reported vs PET with LR<sub>+</sub>, LR<sub>−</sub> (thus Se<sub>B|P</sub>, Sp<sub>B|P</sub>), we solve for Se<sub>B</sub>, Sp<sub>B</sub> vs autopsy via PPV/NPV(PET) at a chosen prevalence and conditional independence (B ⟂ PET | disease). Then LR<sub>+</sub>=Se<sub>B</sub>/(1−Sp<sub>B</sub>), LR<sub>−</sub>=(1−Se<sub>B</sub>)/Sp<sub>B</sub>.</p>
       </div>
     </div>
