@@ -320,5 +320,60 @@ if('serviceWorker' in navigator){ addEventListener('load',()=> navigator.service
 </script>
 <script src="app.js"></script>
   <script src="overrides.js"></script>
+
+<!-- ===== BEGIN: Autopsy-Anchored Methods & Sources (injected) ===== -->
+<section id="autopsy-anchored-sources" style="margin:2rem 0; padding:1rem; border:1px solid #ddd; border-radius:12px;">
+  <h2 style="margin-top:0;">Autopsy‑Anchored Posterior: Methods & Sources</h2>
+  <details open>
+    <summary><strong>Method note (click to toggle)</strong></summary>
+    <p style="margin-top:0.5rem;">
+      We compute post‑test probabilities via Bayes in odds form using clinical priors (age, stage, ± APOE) and biomarker‑specific likelihood ratios (LRs) typically reported against in‑life references (Aβ‑PET or CSF). We then recalibrate from PET/CSF‑referenced log‑odds to an <em>autopsy‑anchored</em> posterior probability using published PET⇄autopsy performance (sensitivity/specificity) as a bridging step. 
+      <br><em>Assumption:</em> conditional independence of the Test and PET given autopsy status. When biomarkers are correlated, reduce the LR magnitude accordingly or use dependence‑aware fusion.
+    </p>
+  </details>
+
+  <details>
+    <summary><strong>Key sources (click to toggle)</strong></summary>
+    <ul style="line-height:1.4; margin-top:0.5rem;">
+      <li><strong>PET vs autopsy (ground truth):</strong>
+        <ul>
+          <li>Clark CM, et al. <em>Lancet Neurol</em>. 2012;11(8):669‑678. (Florbetapir vs autopsy)</li>
+          <li>Clark CM, et al. <em>JAMA</em>. 2011;305(3):275‑283. (Use of florbetapir PET)</li>
+          <li>Sabri O, et al. <em>Alzheimer’s Dement</em>. 2015;11(8):964‑974. (Florbetaben Phase 3)</li>
+        </ul>
+      </li>
+      <li><strong>CSF biomarkers vs PET (cross‑platform):</strong>
+        <ul>
+          <li>Leuzy A, et al. <em>Alzheimer’s Dement</em>. 2023. (Aβ42/40; Aβ42/p‑tau181 cut‑offs vs PET & ADNC)</li>
+          <li>Keshavan A, et al. <em>Alz Res Ther</em>. 2020;12:170. (Lumipulse vs established immunoassays; PET prediction)</li>
+          <li>Elecsys p‑tau181/Aβ42 ratio — routine use & PET association (2025 report).</li>
+        </ul>
+      </li>
+      <li><strong>Plasma Aβ42/40 vs PET:</strong>
+        <ul>
+          <li>Doecke JD, et al. <em>Neurology</em>. 2020;94(24):e2402‑e2412.</li>
+          <li>Schindler SE, et al. <em>Neurology</em>. 2019;93(17):e1647‑e1659.</li>
+          <li>Cheng L, et al. <em>Front Aging Neurosci</em>. 2022. (Systematic evidence)</li>
+          <li>Figdore DJ, et al. 2024. (Lumipulse plasma Aβ42/40 with CSF/PET comparators)</li>
+        </ul>
+      </li>
+      <li><strong>Plasma p‑tau (p‑tau217 / p‑tau181) vs PET/tau‑PET:</strong>
+        <ul>
+          <li>Palmqvist S, et al. <em>JAMA</em>. 2020;324(8):772‑781.</li>
+          <li>Ashton NJ, et al. <em>JAMA Neurol</em>. 2024. (Multicenter)</li>
+          <li>Barthélemy NR, et al. <em>Nat Med</em>. 2024. (Head‑to‑head with CSF)</li>
+        </ul>
+      </li>
+      <li><strong>Commercial panels (APS / PrecivityAD):</strong>
+        <ul>
+          <li>Kirmess KM, et al. <em>Diagnostics</em>. 2021;11(6):1021. (LC‑MS/MS; APS derivation)</li>
+          <li>Meyer MR, et al. <em>Alzheimer’s Dement</em>. 2024;20(5):3179‑3192. (PrecivityAD2 validation vs PET)</li>
+        </ul>
+      </li>
+    </ul>
+    <p style="font-size:0.95em;color:#555;">Defaults are illustrative; edit LR/priors per your lab/platform.</p>
+  </details>
+</section>
+<!-- ===== END: Autopsy-Anchored Methods & Sources (injected) ===== -->
 </body>
 </html>
