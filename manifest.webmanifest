@@ -1,6 +1,6 @@
 {
-  "name": "pTau217/A\u03b242 Bayesian Calculator",
-  "short_name": "pTau217 Bayesian",
+  "name": "Bayesian Amyloid Helper",
+  "short_name": "Amyloid Helper",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",

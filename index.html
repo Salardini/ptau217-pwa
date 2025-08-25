@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
-<title>pTau217/Aβ42 Bayesian Calculator</title>
+<title>Bayesian Amyloid Helper</title>
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="stylesheet" href="styles.css"/>
 </head>
@@ -13,8 +13,8 @@
     <div class="brand">
       <div class="logo">β</div>
       <div class="title">
-        <div class="headline title-gradient">pTau217/Aβ<sub>42</sub> Bayesian</div>
-        <div class="sub muted">Diagnostic & Prognostic helper (client-side only)</div>
+        <div class="headline title-gradient">Bayesian Amyloid Helper</div>
+        <div class="sub muted">Two-test workflow · client-side only</div>
       </div>
     </div>
     <span id="offline" class="offline">Offline</span>
@@ -25,23 +25,25 @@
   <section class="card">
     <h1 class="h">How to use</h1>
     <ol class="steps">
-      <li><span class="step-title">Pick clinical context.</span> Choose age, baseline stage, and optional APOE.</li>
-      <li><span class="step-title">Select the test category.</span> Positive / Indeterminate / Negative based on your lab band.</li>
-      <li><span class="step-title">Review the posterior.</span> We apply Bayes on odds using FDA-cleared likelihood ratios.</li>
-      <li><span class="step-title">(Optional) Project short-term risk.</span> Use the Prognostic tab with editable hazards.</li>
+      <li><span class="step-title">Set clinical context.</span> Choose age, stage, optional APOE.</li>
+      <li><span class="step-title">Configure Test A.</span> Pick a modality & category (Pos/Indet/Neg), edit LRs if needed.</li>
+      <li><span class="step-title">Optionally enable Test B.</span> Posterior from A becomes the prior for B.</li>
+      <li><span class="step-title">Optionally harmonize to autopsy.</span> Convert tests reported vs PET into autopsy-anchored LRs.</li>
+      <li><span class="step-title">Read results.</span> Posterior after A and after A→B, plus PPV/NPV lines.</li>
     </ol>
-    <p class="small muted">Notes: Priors approximate age×stage anchors; APOE modifies odds multiplicatively. Edit LRs/hazards to match your cohort if needed.</p>
+    <p class="small muted">Assumptions: LRs are assay/threshold specific. Sequential Bayes assumes conditional independence given disease. Client-side only.</p>
   </section>
 
   <nav class="tabs">
-    <button class="tab-btn" id="tabDx" aria-selected="true" onclick="showTab('dx')">Diagnostic (Amyloid)</button>
-    <button class="tab-btn" id="tabProg" aria-selected="false" onclick="showTab('prog')">Prognostic (Conversion)</button>
+    <button class="tab-btn" id="tabDx" aria-selected="true" onclick="showTab('dx')">Diagnostic (Two tests)</button>
+    <button class="tab-btn" id="tabProg" aria-selected="false" onclick="showTab('prog')">Prognostic</button>
+    <button class="tab-btn" id="tabBridge" aria-selected="false" onclick="showTab('bridge')">Harmonize to Autopsy</button>
     <button class="tab-btn" id="tabAbout" aria-selected="false" onclick="showTab('about')">About & Methods</button>
   </nav>
 
   <!-- Diagnostic -->
   <section id="panel-dx" class="tab card">
-    <h2 class="h section-gradient">Diagnostic: Posterior P(Aβ+)</h2>
+    <h2 class="h section-gradient">Diagnostic: Sequential Bayes (A then optional B)</h2>
     <div class="grid">
       <div class="card">
         <h3 class="h h-blue">Clinical context</h3>
@@ -64,61 +66,79 @@
           <option value="e3e4">ε3/ε4</option>
           <option value="e4e4">ε4/ε4</option>
         </select>
-        <div class="help">The auto prior blends age×stage anchors; APOE is applied on the odds scale.</div>
-      </div>
-
-      <div class="card">
-        <h3 class="h h-violet">Assay summary (Lumipulse pTau217/Aβ<sub>42</sub>)</h3>
-        <label>Result category</label>
-        <select id="testcat">
-          <option value="neg">Negative (≤ 0.00370)</option>
-          <option value="indet">Indeterminate (0.00371–0.00737)</option>
-          <option value="pos" selected>Positive (≥ 0.00738)</option>
-        </select>
-
+        <div class="help">Auto prior uses age×stage anchors and adjusts odds by APOE.</div>
         <div class="hr"></div>
-        <h4 class="h h-amber">Likelihood ratios (editable)</h4>
-        <div class="grid tight">
-          <div>
-            <label>LR<sub>+</sub> (Positive)</label>
-            <input type="number" id="lr_pos" value="10.68" step="0.01">
-            <div class="small muted">95% CI 6.90–16.79</div>
-          </div>
-          <div>
-            <label>LR (Indeterminate)</label>
-            <input type="number" id="lr_indet" value="0.96" step="0.01">
-            <div class="small muted">95% CI 0.67–1.36</div>
-          </div>
-          <div>
-            <label>LR<sub>-</sub> (Negative)</label>
-            <input type="number" id="lr_neg" value="0.03" step="0.001">
-            <div class="small muted">95% CI 0.01–0.06</div>
-          </div>
-        </div>
-      </div>
-
-      <div class="card">
         <h3 class="h h-teal">Prior control</h3>
-        <label>Auto prior (age×stage ± APOE)</label>
+        <label>Auto prior (read-only)</label>
         <input type="number" id="auto_prior" readonly value="0.700" />
         <label>Override prior (0–1, optional)</label>
         <input type="number" id="prior_override" min="0" max="1" step="0.001" placeholder="Leave blank to use auto prior">
-        <div class="help">If you have a cohort-specific prior, enter it here (as a probability).</div>
+      </div>
+
+      <div class="card">
+        <h3 class="h h-violet">Test A</h3>
+        <label>Modality</label>
+        <select id="modA"></select>
+        <label>Result category</label>
+        <select id="catA">
+          <option value="pos">Positive</option>
+          <option value="indet">Indeterminate</option>
+          <option value="neg">Negative</option>
+        </select>
+        <div class="grid tight">
+          <div><label>LR<sub>+</sub> (A+)</label><input type="number" id="lrA_pos" step="0.01"></div>
+          <div><label>LR (Indet)</label><input type="number" id="lrA_indet" step="0.01"></div>
+          <div><label>LR<sub>-</sub> (A−)</label><input type="number" id="lrA_neg" step="0.001"></div>
+        </div>
+        <div class="row"><button class="btn" id="defaultsA">Reset Test A to defaults</button></div>
+        <div class="small muted">Defaults are illustrative; edit to match your assay/platform & threshold.</div>
+      </div>
+
+      <div class="card">
+        <h3 class="h h-amber">Test B (optional)</h3>
+        <label>Use second test?</label>
+        <select id="useB">
+          <option value="no" selected>No — only Test A</option>
+          <option value="yes">Yes — apply Test B after A</option>
+        </select>
+        <div id="panelB" style="display:none">
+          <label>Modality</label>
+          <select id="modB"></select>
+          <label>Result category</label>
+          <select id="catB">
+            <option value="pos">Positive</option>
+            <option value="indet">Indeterminate</option>
+            <option value="neg">Negative</option>
+          </select>
+          <div class="grid tight">
+            <div><label>LR<sub>+</sub> (B+)</label><input type="number" id="lrB_pos" step="0.01"></div>
+            <div><label>LR (Indet)</label><input type="number" id="lrB_indet" step="0.01"></div>
+            <div><label>LR<sub>-</sub> (B−)</label><input type="number" id="lrB_neg" step="0.001"></div>
+          </div>
+          <div class="row"><button class="btn" id="defaultsB">Reset Test B to defaults</button></div>
+        </div>
       </div>
     </div>
 
     <div class="row">
-      <button class="btn" id="calc_dx">Compute posterior</button>
-      <label class="small"><input type="checkbox" id="uncert"> Show uncertainty (use LR 95% CIs)</label>
+      <button class="btn" id="calc_dx">Compute posterior(s)</button>
+      <label class="small"><input type="checkbox" id="uncert"> Show uncertainty (Test A LR CIs only)</label>
     </div>
 
     <div class="card result-card">
-      <h3 class="h">Posterior</h3>
-      <div id="post_p" class="result big-gradient">Posterior P(A+) —</div>
-      <div id="post_chip" class="chip">—</div>
-      <div class="small muted" id="post_details"></div>
-      <div class="callout small">Indeterminate band typically conveys minimal information (LR≈1); consider confirmatory testing or longitudinal follow-up.</div>
+      <h3 class="h">Posterior after Test A</h3>
+      <div id="post_p1" class="result big-gradient">—</div>
+      <div id="chip1" class="chip">—</div>
+      <div class="small muted" id="post_details1"></div>
     </div>
+
+    <div id="comboBlock" class="card result-card" style="display:none">
+      <h3 class="h">Posterior after Test A → Test B</h3>
+      <div id="post_p2" class="result big-gradient">—</div>
+      <div id="chip2" class="chip">—</div>
+      <div class="small muted" id="post_details2"></div>
+    </div>
+    <div class="callout small">Sequential Bayes assumes tests are independent given disease status; real-world correlation can attenuate LRs.</div>
   </section>
 
   <!-- Prognostic -->
@@ -156,17 +176,56 @@
       </div>
     </div>
 
-    <div class="row">
-      <button class="btn" id="calc_prog">Compute projected risk</button>
-    </div>
+    <div class="row"><button class="btn" id="calc_prog">Compute projected risk</button></div>
 
     <div class="card result-card">
       <h3 class="h">Projection</h3>
-      <div id="risk_out" class="result big-gradient">Projected risk —</div>
+      <div id="risk_out" class="result big-gradient">—</div>
       <div id="risk_chip" class="chip">—</div>
       <div class="small muted" id="prog_details"></div>
-      <div class="callout small">Short-term assumption. For longer spans, consider age-advancing hazards or cohort survival curves.</div>
     </div>
+  </section>
+
+  <!-- Harmonize to Autopsy -->
+  <section id="panel-bridge" class="tab card" style="display:none">
+    <h2 class="h section-gradient">Harmonize tests to autopsy reference</h2>
+    <p class="small muted">Most plasma/CSF tests are reported vs PET; use this tool to re-express them vs autopsy (same footing as PET).</p>
+
+    <div class="grid">
+      <div class="card">
+        <h3 class="h h-blue">Reference: PET vs autopsy</h3>
+        <label>PET Sensitivity vs autopsy (Se<sub>P</sub>)</label>
+        <input type="number" id="pet_se" min="0" max="1" step="0.001" value="0.92">
+        <label>PET Specificity vs autopsy (Sp<sub>P</sub>)</label>
+        <input type="number" id="pet_sp" min="0" max="1" step="0.001" value="0.90">
+        <label>Prevalence used for bridging (match cohort of the biomarker)</label>
+        <input type="number" id="pet_prev" min="0.01" max="0.99" step="0.001" value="0.50">
+        <div class="help">Bridging uses PPV/NPV derived from Se<sub>P</sub>, Sp<sub>P</sub>, and this prevalence.</div>
+      </div>
+
+      <div class="card">
+        <h3 class="h h-violet">Test A reported vs PET</h3>
+        <div class="grid tight">
+          <div><label>LR<sub>+</sub> vs PET</label><input type="number" id="a_lrp" step="0.01" value="10.68"></div>
+          <div><label>LR<sub>-</sub> vs PET</label><input type="number" id="a_lrn" step="0.001" value="0.03"></div>
+        </div>
+        <div class="row"><button class="btn" id="bridgeA">Compute autopsy LRs → fill Test A</button></div>
+        <div class="small muted" id="bridgeA_out"></div>
+      </div>
+
+      <div class="card">
+        <h3 class="h h-amber">Test B reported vs PET</h3>
+        <div class="grid tight">
+          <div><label>LR<sub>+</sub> vs PET</label><input type="number" id="b_lrp" step="0.01" value="4.5"></div>
+          <div><label>LR<sub>-</sub> vs PET</label><input type="number" id="b_lrn" step="0.001" value="0.13"></div>
+        </div>
+        <div class="row"><button class="btn" id="bridgeB">Compute autopsy LRs → fill Test B</button></div>
+        <div class="small muted" id="bridgeB_out"></div>
+      </div>
+    </div>
+
+    <div class="row"><button class="btn" id="bridgeBoth">Compute autopsy LRs for A & B and fill both</button></div>
+    <div class="callout small">If inputs are incompatible (e.g., different spectrum/thresholds), results may be clamped to [0,1] and a warning shown.</div>
   </section>
 
   <!-- About -->
@@ -175,19 +234,15 @@
     <div class="grid">
       <div class="card">
         <h3 class="h h-teal">What this tool does</h3>
-        <p>Computes the posterior probability of amyloid positivity using Bayes on the odds scale, given your prior and assay likelihood ratio (LR). It then mixes A+ and A− conversion hazards to estimate short-term risk.</p>
+        <p>Computes posterior probability of amyloid positivity using Bayes on odds, with up to two tests. Includes PPV/NPV at your chosen prior and a bridge to express PET-referenced tests on the autopsy scale.</p>
       </div>
       <div class="card">
         <h3 class="h h-amber">Bayes (odds form)</h3>
-        <p class="small">prior_odds = p/(1−p) → post_odds = prior_odds × LR → post_p = post_odds/(1+post_odds). APOE modifies odds via an OR.</p>
+        <p class="small">prior_odds = p/(1−p) → post_odds = prior_odds × LR → post_p = post_odds/(1+post_odds).</p>
       </div>
       <div class="card">
-        <h3 class="h h-violet">Assumptions & caveats</h3>
-        <ul class="small">
-          <li>FDA-cleared LRs and cut points; specialized-care tool, not for screening.</li>
-          <li>Age×stage priors approximate literature; adjust to your cohort as needed.</li>
-          <li>All computation is client-side; no data leave your device.</li>
-        </ul>
+        <h3 class="h h-violet">Harmonization model</h3>
+        <p class="small">Let PET have Se<sub>P</sub>, Sp<sub>P</sub> vs autopsy. For a test B reported vs PET with LR<sub>+</sub>, LR<sub>−</sub> (thus Se<sub>B|P</sub>, Sp<sub>B|P</sub>), we solve for Se<sub>B</sub>, Sp<sub>B</sub> vs autopsy via PPV/NPV(PET) at a chosen prevalence and conditional independence (B ⟂ PET | disease). Then LR<sub>+</sub>=Se<sub>B</sub>/(1−Sp<sub>B</sub>), LR<sub>−</sub>=(1−Se<sub>B</sub>)/Sp<sub>B</sub>.</p>
       </div>
     </div>
   </section>
@@ -195,7 +250,7 @@
 
 <script>
 function showTab(which){
-  const ids = ['dx','prog','about'];
+  const ids = ['dx','prog','bridge','about'];
   ids.forEach(id=>{
     const p = document.getElementById('panel-'+id);
     const b = document.getElementById('tab'+id.charAt(0).toUpperCase()+id.slice(1));
@@ -205,8 +260,7 @@ function showTab(which){
     b.setAttribute('aria-selected', on ? 'true' : 'false');
   });
 }
-// SW (works on localhost)
-if('serviceWorker' in navigator){ window.addEventListener('load',()=> navigator.serviceWorker.register('./sw.js')); }
+if('serviceWorker' in navigator){ addEventListener('load',()=> navigator.serviceWorker.register('./sw.js')); }
 </script>
 <script src="app.js"></script>
 </body>
