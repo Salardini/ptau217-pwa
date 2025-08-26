@@ -414,6 +414,18 @@ document.getElementById("calc_prog").addEventListener("click", computePrognostic
 
 updateAutoPrior(); computeDiagnostic();
 
+// Force cache update check
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.getRegistrations().then(function(registrations) {
+    for(let registration of registrations) {
+      registration.update();
+    }
+  });
+}
+
+// Add version check for debugging
+console.log('Bayesian Amyloid Helper v213 loaded');
+
 // Mode toggle functionality
 document.getElementById("advancedMode").addEventListener("change", function(e) {
   if (e.target.checked) {
