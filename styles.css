@@ -86,3 +86,64 @@ button:focus-visible, input:focus-visible, select:focus-visible {
   outline: 2px solid var(--blue);
   outline-offset: 2px;
 }
+
+/* Phase 2: Wizard and guided experience */
+.usage-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.wizard-controls{display:flex;gap:8px}
+.wizard-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(11,15,28,0.9);backdrop-filter:blur(4px);z-index:1000;display:flex;align-items:center;justify-content:center}
+.wizard-container{background:var(--panel);border:1px solid var(--border);border-radius:16px;max-width:600px;width:90%;max-height:80vh;display:flex;flex-direction:column}
+.wizard-header{display:flex;justify-content:space-between;align-items:center;padding:20px;border-bottom:1px solid var(--border)}
+.wizard-close{background:none;border:none;color:var(--muted);font-size:1.2rem;cursor:pointer;padding:4px}
+.wizard-content{flex:1;padding:20px;overflow-y:auto}
+.wizard-progress{margin-bottom:16px}
+.wizard-progress-bar{width:100%;height:4px;background:rgba(96,165,250,0.2);border-radius:2px;overflow:hidden}
+.wizard-progress-fill{height:100%;background:var(--blue);transition:width 0.3s ease}
+.wizard-step-counter{font-size:0.9rem;color:var(--muted);float:right;margin-top:8px}
+.wizard-text{font-size:1rem;line-height:1.5;margin:16px 0}
+.wizard-footer{display:flex;justify-content:space-between;align-items:center;padding:20px;border-top:1px solid var(--border)}
+
+/* Case Management */
+.case-controls{display:grid;gap:16px}
+.saved-cases label{display:block;margin-bottom:8px}
+.case-buttons{display:flex;gap:8px;margin-top:8px}
+.case-metadata{display:flex;gap:12px;flex-wrap:wrap}
+.case-metadata input{flex:1;min-width:200px}
+.btn.small{padding:6px 10px;font-size:0.9rem}
+
+/* What-If Analysis */
+.sensitivity-controls{display:grid;gap:20px}
+.scenario-sliders{display:grid;gap:16px}
+.slider-group{display:flex;flex-direction:column;gap:8px}
+.slider-group label{display:flex;justify-content:space-between;align-items:center}
+.slider-group input[type="range"]{width:100%;height:6px;border-radius:3px;background:rgba(255,255,255,0.1);outline:none;appearance:none}
+.slider-group input[type="range"]::-webkit-slider-thumb{appearance:none;width:18px;height:18px;border-radius:50%;background:var(--blue);cursor:pointer}
+.slider-group input[type="range"]::-moz-range-thumb{width:18px;height:18px;border-radius:50%;background:var(--blue);cursor:pointer;border:none}
+.scenario-results{background:rgba(45,212,191,0.05);border:1px solid rgba(45,212,191,0.2);border-radius:8px;padding:16px}
+.result-range{display:flex;align-items:center;gap:12px}
+.range-bar{flex:1;height:24px;background:rgba(255,255,255,0.1);border-radius:12px;position:relative;overflow:hidden}
+.range-fill{height:100%;background:linear-gradient(90deg,var(--teal),var(--amber),var(--rose));border-radius:12px;transition:width 0.3s ease}
+.range-text{font-weight:600;color:var(--teal)}
+
+/* Smart Suggestions */
+.smart-suggestions{background:rgba(96,165,250,0.05);border:1px solid rgba(96,165,250,0.2);border-radius:8px;padding:12px;margin-top:12px}
+.suggestion-title{margin:0 0 8px;color:var(--blue);font-size:0.95rem}
+.suggestion-list{margin:0;padding-left:16px;color:var(--text)}
+.suggestion-list li{margin:4px 0;font-size:0.9rem;line-height:1.4}
+
+/* Risk Stratification */
+.risk-stratification{background:rgba(251,113,133,0.05);border:1px solid rgba(251,113,133,0.2);border-radius:8px;padding:12px;margin-top:12px}
+.risk-title{margin:0 0 12px;color:var(--rose);font-size:0.95rem}
+.risk-scale{position:relative;height:24px;background:linear-gradient(90deg,var(--teal),var(--amber),var(--rose));border-radius:12px;overflow:hidden}
+.risk-markers{display:flex;justify-content:space-between;margin-bottom:8px;font-size:0.85rem}
+.risk-marker.low{color:var(--teal)}
+.risk-marker.med{color:var(--amber)}
+.risk-marker.high{color:var(--rose)}
+.risk-indicator{position:absolute;top:-4px;width:4px;height:32px;background:white;border:2px solid var(--panel);border-radius:2px;transform:translateX(-50%);transition:left 0.3s ease}
+
+/* Responsive adjustments */
+@media (max-width: 640px) {
+  .wizard-controls{flex-direction:column}
+  .case-metadata{flex-direction:column}
+  .case-buttons{justify-content:flex-start}
+  .result-range{flex-direction:column;align-items:stretch;gap:8px}
+}

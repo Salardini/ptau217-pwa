@@ -23,8 +23,14 @@
 
 <main class="main wrap">
   <section class="card">
-    <h1 class="h">How to use</h1>
-    <ol class="steps">
+    <div class="usage-header">
+      <h1 class="h">How to use</h1>
+      <div class="wizard-controls">
+        <button class="btn secondary" id="start-wizard" aria-label="Start guided tutorial">🎯 Start Guided Tutorial</button>
+        <button class="btn secondary" id="example-case" aria-label="Load example case">📋 Load Example</button>
+      </div>
+    </div>
+    <ol class="steps" id="usage-steps">
       <li><span class="step-title">Set clinical context.</span> Choose age, stage, optional APOE.</li>
       <li><span class="step-title">Configure Test A.</span> Pick a modality & category (Pos/Indet/Neg), edit LRs if needed.</li>
       <li><span class="step-title">Optionally enable Test B.</span> Posterior from A becomes the prior for B.</li>
@@ -32,6 +38,35 @@
       <li><span class="step-title">Prognosis.</span> By default, uses the autopsy-anchored posterior.</li>
     </ol>
   </section>
+
+  <!-- Wizard Overlay -->
+  <div id="wizard-overlay" class="wizard-overlay" style="display: none;" role="dialog" aria-labelledby="wizard-title" aria-modal="true">
+    <div class="wizard-container">
+      <div class="wizard-header">
+        <h2 id="wizard-title">Guided Tutorial</h2>
+        <button class="wizard-close" id="wizard-close" aria-label="Close tutorial">✕</button>
+      </div>
+      <div class="wizard-content">
+        <div class="wizard-step" id="wizard-step-content">
+          <div class="wizard-progress">
+            <div class="wizard-progress-bar">
+              <div class="wizard-progress-fill" id="wizard-progress"></div>
+            </div>
+            <span class="wizard-step-counter" id="wizard-counter">Step 1 of 5</span>
+          </div>
+          <div class="wizard-text" id="wizard-text">
+            Welcome to the Bayesian Amyloid Helper! Let's walk through calculating amyloid probability step by step.
+          </div>
+          <div class="wizard-highlight" id="wizard-highlight"></div>
+        </div>
+      </div>
+      <div class="wizard-footer">
+        <button class="btn secondary" id="wizard-prev" disabled>← Previous</button>
+        <button class="btn primary" id="wizard-next">Next →</button>
+        <button class="btn secondary" id="wizard-skip">Skip Tutorial</button>
+      </div>
+    </div>
+  </div>
 
   <nav class="tabs">
     <button class="tab-btn" id="tabDx" aria-selected="true" onclick="showTab('dx')">Diagnostic</button>
@@ -183,12 +218,63 @@
     <div class="row">
       <button class="btn primary" id="calc_dx" aria-describedby="calc-help">Compute posterior(s)</button>
       <button class="btn secondary" id="export_pdf" aria-label="Export results as PDF" style="display:none">📄 Export PDF</button>
+      <button class="btn secondary" id="save_case" aria-label="Save current case" style="display:none">💾 Save Case</button>
+      <button class="btn secondary" id="what_if" aria-label="Open what-if analysis" style="display:none">🔍 What-If</button>
       <div class="advanced-only">
         <label class="small"><input type="checkbox" id="uncert"> Show uncertainty (Test A LR CIs only)</label>
       </div>
     </div>
     <div id="calc-help" class="small muted" style="margin-top: 8px;">
       Results will show both PET-referenced and autopsy-anchored probability estimates.
+    </div>
+
+    <!-- Case Management Panel -->
+    <div class="card advanced-only" id="case-management" style="display:none;">
+      <h3 class="h h-green">Case Management</h3>
+      <div class="case-controls">
+        <div class="saved-cases">
+          <label>Saved Cases</label>
+          <select id="saved-cases-list">
+            <option value="">Select a saved case...</option>
+          </select>
+          <div class="case-buttons">
+            <button class="btn small" id="load-case">Load</button>
+            <button class="btn small" id="delete-case">Delete</button>
+            <button class="btn small" id="compare-cases">Compare</button>
+          </div>
+        </div>
+        <div class="case-metadata">
+          <input type="text" id="case-name" placeholder="Case name (optional)" maxlength="50">
+          <input type="text" id="case-notes" placeholder="Clinical notes (optional)" maxlength="200">
+        </div>
+      </div>
+    </div>
+
+    <!-- What-If Analysis Panel -->
+    <div class="card" id="what-if-panel" style="display:none;">
+      <h3 class="h h-amber">What-If Sensitivity Analysis</h3>
+      <div class="sensitivity-controls">
+        <div class="scenario-sliders">
+          <div class="slider-group">
+            <label>Age variation: <span id="age-range">±5 years</span></label>
+            <input type="range" id="age-sensitivity" min="1" max="15" value="5" step="1">
+          </div>
+          <div class="slider-group">
+            <label>LR+ variation: <span id="lr-range">±20%</span></label>
+            <input type="range" id="lr-sensitivity" min="5" max="50" value="20" step="5">
+          </div>
+        </div>
+        <div class="scenario-results">
+          <div class="result-range">
+            <span class="range-label">Probability Range:</span>
+            <div class="range-bar">
+              <div class="range-fill" id="sensitivity-range"></div>
+              <span class="range-text" id="sensitivity-text">65% - 85%</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <button class="btn secondary" id="close-what-if">Close Analysis</button>
     </div>
 
     <!-- As-entered posteriors -->
@@ -205,6 +291,21 @@
         <div class="small muted" id="post_details1"></div>
         <div class="confidence-text small muted" id="confidence_text1" style="display:none"></div>
         <div class="plain-language" id="plain_language1"></div>
+        <div class="smart-suggestions" id="suggestions1" style="display:none;">
+          <h4 class="suggestion-title">💡 Clinical Insights</h4>
+          <ul class="suggestion-list" id="suggestion-list1"></ul>
+        </div>
+        <div class="risk-stratification" id="risk-viz1" style="display:none;">
+          <h4 class="risk-title">📊 Risk Stratification</h4>
+          <div class="risk-scale">
+            <div class="risk-markers">
+              <span class="risk-marker low">Low</span>
+              <span class="risk-marker med">Medium</span>
+              <span class="risk-marker high">High</span>
+            </div>
+            <div class="risk-indicator" id="risk-position1"></div>
+          </div>
+        </div>
       </div>
     </div>
 

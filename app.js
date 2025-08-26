@@ -524,12 +524,341 @@ This tool is for educational purposes only. Results should not be used for clini
 
 document.getElementById("export_pdf").addEventListener("click", generatePDF);
 
-// Show export button after calculation
+// Show action buttons after calculation
 const originalComputeDiagnostic = computeDiagnostic;
 window.computeDiagnostic = function() {
   originalComputeDiagnostic();
   document.getElementById("export_pdf").style.display = "inline-block";
+  document.getElementById("save_case").style.display = "inline-block";
+  document.getElementById("what_if").style.display = "inline-block";
+  
+  // Show smart suggestions and risk visualization
+  generateSmartSuggestions();
+  updateRiskVisualization();
 };
+
+// Phase 2: Guided Wizard System
+const wizardSteps = [
+  {
+    title: "Welcome to Bayesian Amyloid Helper",
+    text: "This tool calculates the probability of amyloid pathology using Bayesian statistics. We'll guide you through a typical calculation step by step.",
+    highlight: null,
+    action: null
+  },
+  {
+    title: "Step 1: Clinical Context",
+    text: "First, let's set up the patient's clinical context. Age and cognitive stage are the most important factors for determining baseline risk.",
+    highlight: ".card:has(#age)",
+    action: () => {
+      document.getElementById("age").focus();
+      document.getElementById("age").value = "73";
+    }
+  },
+  {
+    title: "Step 2: Select Test",
+    text: "Now choose the biomarker test that was performed. Each test has different performance characteristics for detecting amyloid pathology.",
+    highlight: ".card:has(#modA)",
+    action: () => {
+      document.getElementById("modA").focus();
+      document.getElementById("modA").value = "plasma_ptau217_generic";
+      setDefaults("A");
+    }
+  },
+  {
+    title: "Step 3: Test Result",
+    text: "Select whether the test result was positive, negative, or indeterminate. This determines which likelihood ratio will be used.",
+    highlight: "select#catA",
+    action: () => {
+      document.getElementById("catA").focus();
+      document.getElementById("catA").value = "pos";
+    }
+  },
+  {
+    title: "Step 4: Calculate",
+    text: "Now let's compute the probability! The tool will show both PET-referenced and autopsy-anchored estimates with clinical interpretation.",
+    highlight: "#calc_dx",
+    action: () => {
+      document.getElementById("calc_dx").focus();
+    }
+  }
+];
+
+let currentWizardStep = 0;
+
+function startWizard() {
+  document.getElementById("wizard-overlay").style.display = "flex";
+  currentWizardStep = 0;
+  updateWizardStep();
+  
+  // Track wizard completion
+  localStorage.setItem("wizardCompleted", "true");
+}
+
+function updateWizardStep() {
+  const step = wizardSteps[currentWizardStep];
+  const progress = ((currentWizardStep + 1) / wizardSteps.length) * 100;
+  
+  document.getElementById("wizard-text").textContent = step.text;
+  document.getElementById("wizard-progress").style.width = progress + "%";
+  document.getElementById("wizard-counter").textContent = `Step ${currentWizardStep + 1} of ${wizardSteps.length}`;
+  
+  // Update button states
+  document.getElementById("wizard-prev").disabled = currentWizardStep === 0;
+  document.getElementById("wizard-next").textContent = 
+    currentWizardStep === wizardSteps.length - 1 ? "Finish" : "Next →";
+  
+  // Execute step action
+  if (step.action) {
+    setTimeout(step.action, 500);
+  }
+}
+
+function nextWizardStep() {
+  if (currentWizardStep < wizardSteps.length - 1) {
+    currentWizardStep++;
+    updateWizardStep();
+  } else {
+    closeWizard();
+  }
+}
+
+function prevWizardStep() {
+  if (currentWizardStep > 0) {
+    currentWizardStep--;
+    updateWizardStep();
+  }
+}
+
+function closeWizard() {
+  document.getElementById("wizard-overlay").style.display = "none";
+}
+
+// Smart Suggestions System
+function generateSmartSuggestions() {
+  const age = Number(document.getElementById("age").value || 70);
+  const stage = document.getElementById("stage").value;
+  const apoe = document.getElementById("apoe").value;
+  const probability = window.__POSTERIOR_AUTOPSY__ || window.__POSTERIOR__;
+  
+  if (!isFinite(probability)) return;
+  
+  const suggestions = [];
+  
+  // Age-based suggestions
+  if (age > 80 && probability > 0.7) {
+    suggestions.push("Consider amyloid-targeting therapies may have different risk/benefit profiles in patients over 80");
+  }
+  
+  // Stage-based suggestions
+  if (stage === "CN" && probability > 0.8) {
+    suggestions.push("Preclinical amyloid positivity - consider research participation or monitoring protocols");
+  } else if (stage === "MCI" && probability > 0.7) {
+    suggestions.push("MCI with high amyloid probability suggests Alzheimer's pathophysiology - consider comprehensive workup");
+  }
+  
+  // APOE-based suggestions
+  if (apoe.includes("e4") && probability > 0.6) {
+    suggestions.push("APOE ε4 carriers may have faster progression - consider more frequent monitoring");
+  }
+  
+  // Test-specific suggestions
+  const testA = document.getElementById("modA").value;
+  if (testA.includes("plasma") && probability > 0.8) {
+    suggestions.push("High plasma biomarker result - consider confirming with CSF or PET if clinically indicated");
+  }
+  
+  // Risk-based suggestions
+  if (probability > 0.9) {
+    suggestions.push("Very high probability - discuss implications for treatment planning and family counseling");
+  } else if (probability < 0.3) {
+    suggestions.push("Low amyloid probability - consider alternative diagnostic pathways");
+  }
+  
+  // Display suggestions
+  const suggestionEl = document.getElementById("suggestions1");
+  const listEl = document.getElementById("suggestion-list1");
+  
+  if (suggestions.length > 0) {
+    listEl.innerHTML = suggestions.map(s => `<li>${s}</li>`).join("");
+    suggestionEl.style.display = "block";
+  } else {
+    suggestionEl.style.display = "none";
+  }
+}
+
+// Risk Stratification Visualization
+function updateRiskVisualization() {
+  const probability = window.__POSTERIOR_AUTOPSY__ || window.__POSTERIOR__;
+  
+  if (!isFinite(probability)) return;
+  
+  const riskEl = document.getElementById("risk-viz1");
+  const indicatorEl = document.getElementById("risk-position1");
+  
+  if (riskEl && indicatorEl) {
+    const position = Math.min(95, Math.max(5, probability * 100));
+    indicatorEl.style.left = position + "%";
+    riskEl.style.display = "block";
+  }
+}
+
+// Case Management System
+function saveCaseData() {
+  const caseData = {
+    id: Date.now().toString(),
+    name: document.getElementById("case-name").value || `Case ${new Date().toLocaleDateString()}`,
+    notes: document.getElementById("case-notes").value || "",
+    timestamp: new Date().toISOString(),
+    data: {
+      age: document.getElementById("age").value,
+      stage: document.getElementById("stage").value,
+      apoe: document.getElementById("apoe").value,
+      modA: document.getElementById("modA").value,
+      catA: document.getElementById("catA").value,
+      useB: document.getElementById("useB").value,
+      modB: document.getElementById("modB").value,
+      catB: document.getElementById("catB").value,
+      petPosterior: window.__POSTERIOR__,
+      autopsyPosterior: window.__POSTERIOR_AUTOPSY__
+    }
+  };
+  
+  const savedCases = JSON.parse(localStorage.getItem("savedCases") || "[]");
+  savedCases.push(caseData);
+  localStorage.setItem("savedCases", JSON.stringify(savedCases));
+  
+  updateSavedCasesList();
+  
+  // Clear case metadata
+  document.getElementById("case-name").value = "";
+  document.getElementById("case-notes").value = "";
+  
+  alert("Case saved successfully!");
+}
+
+function updateSavedCasesList() {
+  const savedCases = JSON.parse(localStorage.getItem("savedCases") || "[]");
+  const select = document.getElementById("saved-cases-list");
+  
+  select.innerHTML = '<option value="">Select a saved case...</option>';
+  savedCases.forEach(case_item => {
+    const option = document.createElement("option");
+    option.value = case_item.id;
+    option.textContent = `${case_item.name} (${new Date(case_item.timestamp).toLocaleDateString()})`;
+    select.appendChild(option);
+  });
+  
+  // Show case management panel in advanced mode
+  if (savedCases.length > 0 && document.body.classList.contains("advanced-mode")) {
+    document.getElementById("case-management").style.display = "block";
+  }
+}
+
+// What-If Sensitivity Analysis
+function openWhatIfAnalysis() {
+  document.getElementById("what-if-panel").style.display = "block";
+  updateSensitivityAnalysis();
+}
+
+function updateSensitivityAnalysis() {
+  const baseAge = Number(document.getElementById("age").value || 70);
+  const ageVar = Number(document.getElementById("age-sensitivity").value);
+  const lrVar = Number(document.getElementById("lr-sensitivity").value);
+  const baseProbability = window.__POSTERIOR_AUTOPSY__ || window.__POSTERIOR__;
+  
+  if (!isFinite(baseProbability)) return;
+  
+  // Calculate probability range with variations
+  const ageLow = Math.max(18, baseAge - ageVar);
+  const ageHigh = Math.min(100, baseAge + ageVar);
+  const lrMultLow = (100 - lrVar) / 100;
+  const lrMultHigh = (100 + lrVar) / 100;
+  
+  // Simplified sensitivity calculation (would be more complex in reality)
+  const probLow = Math.max(0, baseProbability * 0.8 * lrMultLow);
+  const probHigh = Math.min(1, baseProbability * 1.2 * lrMultHigh);
+  
+  const rangePct = (probHigh - probLow) * 100;
+  const rangeText = `${(probLow * 100).toFixed(0)}% - ${(probHigh * 100).toFixed(0)}%`;
+  
+  document.getElementById("sensitivity-text").textContent = rangeText;
+  document.getElementById("sensitivity-range").style.width = `${rangePct * 2}%`;
+  document.getElementById("age-range").textContent = `±${ageVar} years`;
+  document.getElementById("lr-range").textContent = `±${lrVar}%`;
+}
+
+// Load example case
+function loadExampleCase() {
+  // Load a realistic example
+  document.getElementById("age").value = "73";
+  document.getElementById("stage").value = "MCI";
+  document.getElementById("apoe").value = "e3e4";
+  document.getElementById("modA").value = "plasma_ptau217_generic";
+  document.getElementById("catA").value = "pos";
+  setDefaults("A");
+  updateAutoPrior();
+  
+  setTimeout(() => {
+    computeDiagnostic();
+  }, 500);
+}
+
+// Event Listeners for Phase 2 features
+document.addEventListener("DOMContentLoaded", function() {
+  // Wizard controls
+  document.getElementById("start-wizard").addEventListener("click", startWizard);
+  document.getElementById("wizard-close").addEventListener("click", closeWizard);
+  document.getElementById("wizard-next").addEventListener("click", nextWizardStep);
+  document.getElementById("wizard-prev").addEventListener("click", prevWizardStep);
+  document.getElementById("wizard-skip").addEventListener("click", closeWizard);
+  document.getElementById("example-case").addEventListener("click", loadExampleCase);
+  
+  // Case management
+  document.getElementById("save_case").addEventListener("click", saveCaseData);
+  document.getElementById("load-case").addEventListener("click", function() {
+    const caseId = document.getElementById("saved-cases-list").value;
+    if (!caseId) return;
+    
+    const savedCases = JSON.parse(localStorage.getItem("savedCases") || "[]");
+    const case_item = savedCases.find(c => c.id === caseId);
+    if (!case_item) return;
+    
+    // Load case data
+    Object.keys(case_item.data).forEach(key => {
+      const el = document.getElementById(key);
+      if (el && case_item.data[key] !== undefined) {
+        el.value = case_item.data[key];
+      }
+    });
+    
+    updateAutoPrior();
+    computeDiagnostic();
+  });
+  
+  // What-if analysis
+  document.getElementById("what_if").addEventListener("click", openWhatIfAnalysis);
+  document.getElementById("close-what-if").addEventListener("click", function() {
+    document.getElementById("what-if-panel").style.display = "none";
+  });
+  
+  // Sensitivity sliders
+  document.getElementById("age-sensitivity").addEventListener("input", updateSensitivityAnalysis);
+  document.getElementById("lr-sensitivity").addEventListener("input", updateSensitivityAnalysis);
+  
+  // Initialize case management
+  updateSavedCasesList();
+  
+  // Show wizard for first-time users
+  if (!localStorage.getItem("wizardCompleted")) {
+    setTimeout(() => {
+      if (confirm("Would you like a guided tutorial on using this tool?")) {
+        startWizard();
+      } else {
+        localStorage.setItem("wizardCompleted", "true");
+      }
+    }, 2000);
+  }
+});
 
 // Apply defaults from TEST_LIBRARY into the LR inputs
 function applyDefaultsFor(prefix){
