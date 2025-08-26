@@ -424,7 +424,47 @@ if ('serviceWorker' in navigator) {
 }
 
 // Add version check for debugging
-console.log('Bayesian Amyloid Helper v213 loaded');
+console.log('Bayesian Amyloid Helper v214 loaded');
+
+// Theme switching functionality
+function toggleTheme() {
+  const root = document.documentElement;
+  const themeText = document.getElementById("theme-text");
+  
+  if (root.classList.contains("light-theme")) {
+    root.classList.remove("light-theme");
+    themeText.textContent = "Light";
+    localStorage.setItem("theme", "dark");
+  } else {
+    root.classList.add("light-theme");
+    themeText.textContent = "Dark";
+    localStorage.setItem("theme", "light");
+  }
+}
+
+// Initialize theme from localStorage
+function initializeTheme() {
+  const savedTheme = localStorage.getItem("theme");
+  const themeText = document.getElementById("theme-text");
+  
+  if (savedTheme === "light") {
+    document.documentElement.classList.add("light-theme");
+    if (themeText) themeText.textContent = "Dark";
+  } else {
+    if (themeText) themeText.textContent = "Light";
+  }
+}
+
+// Initialize theme on page load
+initializeTheme();
+
+// Add theme toggle event listener
+document.addEventListener("DOMContentLoaded", function() {
+  const themeToggle = document.getElementById("theme-toggle");
+  if (themeToggle) {
+    themeToggle.addEventListener("click", toggleTheme);
+  }
+});
 
 // Mode toggle functionality
 document.getElementById("advancedMode").addEventListener("change", function(e) {

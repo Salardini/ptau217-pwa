@@ -2,25 +2,51 @@
 :root{
   --bg:#0b0f1c; --panel:#11152a; --border:#2a3152; --text:#e9ebf3; --muted:#b9bfd6;
   --teal:#2dd4bf; --blue:#60a5fa; --violet:#c084fc; --rose:#fb7185; --amber:#fbbf24;
-  --r:16px;
+  --panel-rgb:17,21,42; --r:16px;
+}
+
+/* Light theme */
+:root.light-theme{
+  --bg:#ffffff; --panel:#f8fafc; --border:#e2e8f0; --text:#1e293b; --muted:#64748b;
+  --teal:#0d9488; --blue:#3b82f6; --violet:#8b5cf6; --rose:#e11d48; --amber:#d97706;
+  --panel-rgb:248,250,252;
 }
 *{box-sizing:border-box}
-html,body{margin:0;padding:0;background:
-  radial-gradient(1200px 800px at 80% -10%, rgba(35,62,146,0.18), transparent 60%),
-  radial-gradient(900px 600px at -20% 110%, rgba(123,47,191,0.14), transparent 60%),
-  var(--bg);
-color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,sans-serif;line-height:1.35}
+html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,sans-serif;line-height:1.35;transition:background-color 0.3s ease, color 0.3s ease}
+
+/* Dark theme background gradients */
+:root:not(.light-theme) html,
+:root:not(.light-theme) body {
+  background:
+    radial-gradient(1200px 800px at 80% -10%, rgba(35,62,146,0.18), transparent 60%),
+    radial-gradient(900px 600px at -20% 110%, rgba(123,47,191,0.14), transparent 60%),
+    var(--bg);
+}
+
+/* Light theme background */
+:root.light-theme html,
+:root.light-theme body {
+  background:
+    radial-gradient(1200px 800px at 80% -10%, rgba(59,130,246,0.08), transparent 60%),
+    radial-gradient(900px 600px at -20% 110%, rgba(139,92,246,0.06), transparent 60%),
+    var(--bg);
+}
 a{color:var(--blue)}
 .wrap{max-width:980px;margin:0 auto;padding:18px}
-.header{position:sticky;top:0;z-index:50;background:rgba(11,15,28,.65);backdrop-filter:blur(10px);border-bottom:1px solid rgba(255,255,255,.06)}
+.header{position:sticky;top:0;z-index:50;background:rgba(var(--panel-rgb),.85);backdrop-filter:blur(10px);border-bottom:1px solid var(--border);transition:background-color 0.3s ease}
 .header-inner{display:flex;gap:12px;align-items:center;justify-content:space-between;padding:10px 14px}
 .brand{display:flex;gap:12px;align-items:center}
 .logo{width:38px;height:38px;border-radius:10px;background:linear-gradient(135deg,var(--blue),var(--violet));display:grid;place-items:center;color:#0b0f1c;font-weight:800}
 .headline{font-weight:800;font-size:1.15rem}
 .sub{font-size:.9rem}
+.header-controls{display:flex;align-items:center;gap:12px}
+.theme-toggle{background:rgba(var(--panel-rgb),0.6);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);cursor:pointer;font-size:0.9rem;transition:all 0.3s ease}
+.theme-toggle:hover{background:rgba(var(--panel-rgb),0.8);transform:translateY(-1px)}
 .offline{display:none}.offline.show{display:inline-flex;align-items:center;gap:6px;color:var(--amber)}
 .main{padding:16px}
-.card{background:linear-gradient(180deg, rgba(24,28,47,.97), rgba(16,20,42,.97));border:1px solid var(--border);border-radius:var(--r);padding:16px;margin:14px 0;box-shadow:0 20px 40px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.03)}
+.card{background:var(--panel);border:1px solid var(--border);border-radius:var(--r);padding:16px;margin:14px 0;transition:background-color 0.3s ease;box-shadow:0 8px 32px rgba(0,0,0,0.12)}
+:root:not(.light-theme) .card{background:linear-gradient(180deg, rgba(24,28,47,.97), rgba(16,20,42,.97));box-shadow:0 20px 40px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.03)}
+:root.light-theme .card{box-shadow:0 8px 32px rgba(0,0,0,0.08), inset 0 1px 0 rgba(255,255,255,0.7)}
 .h{margin:0 0 10px}
 .h-blue{color:var(--blue)} .h-violet{color:var(--violet)} .h-amber{color:var(--amber)} .h-teal{color:var(--teal)}
 .section-gradient{background:linear-gradient(90deg,var(--blue),var(--violet));-webkit-background-clip:text;background-clip:text;color:transparent}
@@ -90,8 +116,9 @@ button:focus-visible, input:focus-visible, select:focus-visible {
 /* Phase 2: Wizard and guided experience */
 .usage-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
 .wizard-controls{display:flex;gap:8px}
-.wizard-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(11,15,28,0.9);backdrop-filter:blur(4px);z-index:1000;display:flex;align-items:center;justify-content:center}
-.wizard-container{background:var(--panel);border:1px solid var(--border);border-radius:16px;max-width:600px;width:90%;max-height:80vh;display:flex;flex-direction:column}
+.wizard-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.2);z-index:1000;pointer-events:none}
+.wizard-container{position:fixed;bottom:20px;right:20px;background:var(--panel);border:2px solid var(--blue);border-radius:16px;max-width:400px;width:400px;max-height:300px;display:flex;flex-direction:column;pointer-events:auto;box-shadow:0 20px 40px rgba(0,0,0,0.3)}
+:root.light-theme .wizard-container{box-shadow:0 20px 40px rgba(0,0,0,0.15)}
 .wizard-header{display:flex;justify-content:space-between;align-items:center;padding:20px;border-bottom:1px solid var(--border)}
 .wizard-close{background:none;border:none;color:var(--muted);font-size:1.2rem;cursor:pointer;padding:4px}
 .wizard-content{flex:1;padding:20px;overflow-y:auto}
@@ -105,15 +132,34 @@ button:focus-visible, input:focus-visible, select:focus-visible {
 /* Wizard highlighting */
 .wizard-highlight-active{
   position:relative;
-  z-index:999;
+  z-index:998;
   animation:wizard-pulse 2s infinite;
-  border:3px solid var(--blue) !important;
-  border-radius:8px !important;
-  box-shadow:0 0 20px rgba(96,165,250,0.5) !important;
+  border:4px solid var(--blue) !important;
+  border-radius:12px !important;
+  box-shadow:0 0 30px rgba(96,165,250,0.7) !important;
+  transform:scale(1.02);
+  transition:all 0.3s ease;
 }
 @keyframes wizard-pulse {
-  0%, 100% { box-shadow: 0 0 20px rgba(96,165,250,0.5); }
-  50% { box-shadow: 0 0 30px rgba(96,165,250,0.8); }
+  0%, 100% { 
+    box-shadow: 0 0 30px rgba(96,165,250,0.7);
+    transform: scale(1.02);
+  }
+  50% { 
+    box-shadow: 0 0 40px rgba(96,165,250,1);
+    transform: scale(1.03);
+  }
+}
+
+/* Responsive wizard positioning */
+@media (max-width: 640px) {
+  .wizard-container{
+    bottom:10px;
+    right:10px;
+    left:10px;
+    width:auto;
+    max-width:none;
+  }
 }
 
 /* Case Management */
