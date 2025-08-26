@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+<title>Bayesian Amyloid Helper</title>
+<link rel="manifest" href="manifest.webmanifest"/>
+<link rel="stylesheet" href="styles.css"/>
+</head>
+<body>
+<header class="header">
+  <div class="header-inner wrap">
+    <div class="brand">
+      <div class="logo">β</div>
+      <div class="title">
+        <div class="headline title-gradient">Bayesian Amyloid Helper</div>
+        <div class="sub muted">Two-test workflow · client-side only</div>
+      </div>
+    </div>
+    <span id="offline" class="offline">Offline</span>
+  </div>
+</header>
+
+<main class="main wrap">
+  <section class="card">
+    <h1 class="h">How to use</h1>
+    <ol class="steps">
+      <li><span class="step-title">Set clinical context.</span> Choose age, stage, optional APOE.</li>
+      <li><span class="step-title">Configure Test A.</span> Pick a modality & category (Pos/Indet/Neg), edit LRs if needed.</li>
+      <li><span class="step-title">Optionally enable Test B.</span> Posterior from A becomes the prior for B.</li>
+      <li><span class="step-title">Autopsy panel.</span> We re-express your A/B LRs vs PET onto the autopsy scale and show an autopsy-anchored posterior.</li>
+      <li><span class="step-title">Prognosis.</span> By default, uses the autopsy-anchored posterior.</li>
+    </ol>
+  </section>
+
+  <nav class="tabs">
+    <button class="tab-btn" id="tabDx" aria-selected="true" onclick="showTab('dx')">Diagnostic</button>
+    <button class="tab-btn" id="tabProg" aria-selected="false" onclick="showTab('prog')">Prognostic</button>
+    <button class="tab-btn" id="tabBridge" aria-selected="false" onclick="showTab('bridge')">Harmonize (tools)</button>
+    <button class="tab-btn" id="tabAbout" aria-selected="false" onclick="showTab('about')">About</button>
+  </nav>
+
+  <!-- Diagnostic -->
+  <section id="panel-dx" class="tab card">
+    <h2 class="h section-gradient">Diagnostic: Sequential Bayes (A then optional B)</h2>
+    <div class="grid">
+      <div class="card">
+        <h3 class="h h-blue">Clinical context</h3>
+        <label>Age (years)</label>
+        <input type="number" id="age" min="18" max="100" step="1" value="70">
+        <label>Baseline stage</label>
+        <select id="stage">
+          <option value="CN">Cognitively normal (CN)</option>
+          <option value="SCD">Subjective cognitive decline (SCD)</option>
+          <option value="MCI" selected>Mild cognitive impairment (MCI)</option>
+          <option value="DEM">Dementia (etiology uncertain)</option>
+        </select>
+        <label>APOE genotype (optional)</label>
+        <select id="apoe">
+          <option value="unknown" selected>Unknown / not tested</option>
+          <option value="e2e2">ε2/ε2</option>
+          <option value="e2e3">ε2/ε3</option>
+          <option value="e2e4">ε2/ε4</option>
+          <option value="e3e3">ε3/ε3</option>
+          <option value="e3e4">ε3/ε4</option>
+          <option value="e4e4">ε4/ε4</option>
+        </select>
+        <div class="hr"></div>
+        <h3 class="h h-teal">Prior</h3>
+        <label>Auto prior (read-only)</label>
+        <input type="number" id="auto_prior" readonly value="0.700" />
+        <label>Override prior (0–1, optional)</label>
+        <input type="number" id="prior_override" min="0" max="1" step="0.001" placeholder="Leave blank to use auto prior">
+      </div>
+
+      <div class="card">
+        <h3 class="h h-violet">Test A</h3>
+        <label>Modality</label>
+        <select id="modA"></select>
+        <label>Result category</label>
+        <select id="catA">
+          <option value="pos">Positive</option>
+          <option value="indet">Indeterminate</option>
+          <option value="neg">Negative</option>
+        </select>
+        <div class="grid tight">
+          <div><label>LR<sub>+</sub> (A+)</label><input type="number" id="lrA_pos" step="0.01"></div>
+          <div><label>LR (Indet)</label><input type="number" id="lrA_indet" step="0.01"></div>
+          <div><label>LR<sub>-</sub> (A−)</label><input type="number" id="lrA_neg" step="0.001"></div>
+        </div>
+        <div class="row"><button class="btn" id="defaultsA">Reset Test A to defaults</button></div>
+      </div>
+
+      <div class="card">
+        <h3 class="h h-amber">Test B (optional)</h3>
+        <label>Use second test?</label>
+        <select id="useB">
+          <option value="no" selected>No — only Test A</option>
+          <option value="yes">Yes — apply Test B after A</option>
+        </select>
+        <div id="panelB" style="display:none">
+          <label>Modality</label>
+          <select id="modB"></select>
+          <label>Result category</label>
+          <select id="catB">
+            <option value="pos">Positive</option>
+            <option value="indet">Indeterminate</option>
+            <option value="neg">Negative</option>
+          </select>
+          <div class="grid tight">
+            <div><label>LR<sub>+</sub> (B+)</label><input type="number" id="lrB_pos" step="0.01"></div>
+            <div><label>LR (Indet)</label><input type="number" id="lrB_indet" step="0.01"></div>
+            <div><label>LR<sub>-</sub> (B−)</label><input type="number" id="lrB_neg" step="0.001"></div>
+          </div>
+          <div class="row"><button class="btn" id="defaultsB">Reset Test B to defaults</button></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="row">
+      <button class="btn" id="calc_dx">Compute posterior(s)</button>
+      <label class="small"><input type="checkbox" id="uncert"> Show uncertainty (Test A LR CIs only)</label>
+    </div>
+
+    <!-- As-entered posteriors -->
+    <div class="card result-card">
+      <h3 class="h">PET layer after Test A — P(PET+)</h3>
+      <div id="post_p1" class="result big-gradient">—</div>
+      <div id="chip1" class="chip">—</div>
+      <div class="small muted" id="post_details1"></div>
+    </div>
+
+    <div id="comboBlock" class="card result-card" style="display:none">
+      <h3 class="h">PET layer after Test A → Test B — P(PET+)</h3>
+      <div id="post_p2" class="result big-gradient">—</div>
+      <div id="chip2" class="chip">—</div>
+      <div class="small muted" id="post_details2"></div>
+    </div>
+
+    <!-- Autopsy harmonization settings (inline) -->
+    <div class="card">
+      <h3 class="h h-teal">Autopsy harmonization (used to compute autopsy posterior)</h3>
+      <div class="grid tight">
+        <div><label>PET Sensitivity vs autopsy</label><input type="number" id="pet_se_dx" min="0" max="1" step="0.001" value="0.92"></div>
+        <div><label>PET Specificity vs autopsy</label><input type="number" id="pet_sp_dx" min="0" max="1" step="0.001" value="0.90"></div>
+        <div><label>Prevalence for bridging (match B’s cohort)</label><input type="number" id="pet_prev_dx" min="0.01" max="0.99" step="0.001" value="0.50"></div>
+      </div>
+      <div class="small muted">We re-express Test A/B LRs (typically reported vs PET) onto the autopsy scale using these values.</div>
+    </div>
+
+    <!-- Autopsy-anchored posteriors -->
+    <div class="card result-card">
+      <h3 class="h">Autopsy layer after Test A — Posterior P(autopsy A+)</h3>
+      <div id="post_aut_p1" class="result big-gradient">—</div>
+      <div id="chip_aut1" class="chip">—</div>
+      <div class="small muted" id="post_aut_details1"></div>
+    </div>
+
+    <div id="comboAutBlock" class="card result-card" style="display:none">
+      <h3 class="h">Autopsy layer after Test A → Test B — Posterior P(autopsy A+)</h3>
+      <div id="post_aut_p2" class="result big-gradient">—</div>
+      <div id="chip_aut2" class="chip">—</div>
+      <div class="small muted" id="post_aut_details2"></div>
+    </div>
+
+    <div class="callout small">Sequential Bayes assumes tests are independent given disease; correlation can attenuate effective LRs. Autopsy panel bridges PET-referenced LRs onto an autopsy reference.</div>
+  </section>
+
+  <!-- Prognostic -->
+  <section id="panel-prog" class="tab card" style="display:none">
+    <h2 class="h section-gradient">Prognostic: Short-horizon conversion risk</h2>
+    <p class="muted small">Mixture of constant annual hazards for A+ and A−, weighted by P(A+).</p>
+    <div class="grid">
+      <div class="card">
+        <h3 class="h h-blue">Inputs</h3>
+        <label>Prefer autopsy-anchored posterior (if available)?</label>
+        <select id="prefer_autopsy">
+          <option value="yes" selected>Yes — use autopsy posterior if present</option>
+          <option value="no">No — use as-entered posterior</option>
+        </select>
+        <label>Use posterior from Diagnostic tab?</label>
+        <select id="use_posterior">
+          <option value="yes" selected>Yes — use P(A+)</option>
+          <option value="no">No — enter P(A+)</option>
+        </select>
+        <label>Manual P(A+) (if not using posterior)</label>
+        <input type="number" id="manual_pa" min="0" max="1" step="0.001" placeholder="e.g., 0.70">
+        <label>Baseline stage (prognosis)</label>
+        <select id="stage_prog">
+          <option value="CN">Cognitively normal (CN)</option>
+          <option value="MCI" selected>MCI</option>
+        </select>
+      </div>
+
+      <div class="card">
+        <h3 class="h h-violet">Annual conversion hazards (editable)</h3>
+        <div class="grid tight">
+          <div><label>CN: A+ annual hazard</label><input type="number" id="h_cn_pos" value="0.03" min="0" max="1" step="0.001"></div>
+          <div><label>CN: A− annual hazard</label><input type="number" id="h_cn_neg" value="0.01" min="0" max="1" step="0.001"></div>
+          <div><label>MCI: A+ annual hazard</label><input type="number" id="h_mci_pos" value="0.21" min="0" max="1" step="0.001"></div>
+          <div><label>MCI: A− annual hazard</label><input type="number" id="h_mci_neg" value="0.063" min="0" max="1" step="0.001"></div>
+        </div>
+        <div class="hr"></div>
+        <label>Time horizon (years)</label>
+        <input type="number" id="t_years" value="3" min="0.25" max="10" step="0.25">
+      </div>
+    </div>
+
+    <div class="row"><button class="btn" id="calc_prog">Compute projected risk</button></div>
+
+    <div class="card result-card">
+      <h3 class="h">Projection</h3>
+      <div id="risk_out" class="result big-gradient">—</div>
+      <div id="risk_chip" class="chip">—</div>
+      <div class="small muted" id="prog_details"></div>
+    </div>
+  </section>
+
+  <!-- Harmonize tools tab (unchanged) -->
+  <section id="panel-bridge" class="tab card" style="display:none">
+    <h2 class="h section-gradient">Harmonize tests to autopsy (tools)</h2>
+    <p class="small muted">Use this tab for standalone conversions; the Diagnostic page already computes autopsy posteriors directly.</p>
+
+    <div class="grid">
+      <div class="card">
+        <h3 class="h h-blue">Reference: PET vs autopsy</h3>
+        <label>PET Sensitivity vs autopsy (Se<sub>P</sub>)</label>
+        <input type="number" id="pet_se" min="0" max="1" step="0.001" value="0.92">
+        <label>PET Specificity vs autopsy (Sp<sub>P</sub>)</label>
+        <input type="number" id="pet_sp" min="0" max="1" step="0.001" value="0.90">
+        <label>Prevalence used for bridging</label>
+        <input type="number" id="pet_prev" min="0.01" max="0.99" step="0.001" value="0.50">
+      </div>
+
+      <div class="card">
+        <h3 class="h h-violet">Test A reported vs PET</h3>
+        <div class="grid tight">
+          <div><label>LR<sub>+</sub> vs PET</label><input type="number" id="a_lrp" step="0.01" value="10.68"></div>
+          <div><label>LR<sub>-</sub> vs PET</label><input type="number" id="a_lrn" step="0.001" value="0.03"></div>
+        </div>
+        <div class="row"><button class="btn" id="bridgeA">Compute autopsy LRs → fill Test A</button></div>
+        <div class="small muted" id="bridgeA_out"></div>
+      </div>
+
+      <div class="card">
+        <h3 class="h h-amber">Test B reported vs PET</h3>
+        <div class="grid tight">
+          <div><label>LR<sub>+</sub> vs PET</label><input type="number" id="b_lrp" step="0.01" value="4.5"></div>
+          <div><label>LR<sub>-</sub> vs PET</label><input type="number" id="b_lrn" step="0.001" value="0.13"></div>
+        </div>
+        <div class="row"><button class="btn" id="bridgeB">Compute autopsy LRs → fill Test B</button></div>
+        <div class="small muted" id="bridgeB_out"></div>
+      </div>
+    </div>
+
+    <div class="row"><button class="btn" id="bridgeBoth">Compute autopsy LRs for A & B and fill both</button></div>
+  </section>
+
+  <!-- About -->
+  <section id="panel-about" class="tab card" style="display:none">
+    <h2 class="h section-gradient">About & Methods</h2>
+    <div class="grid">
+      <div class="card">
+        <h3 class="h h-teal">What this tool does</h3>
+        <p>Computes posterior probability of amyloid positivity using Bayes on odds, with up to two tests. Includes PPV/NPV at your prior and an autopsy panel that bridges PET-referenced LRs to the autopsy scale.</p>
+      </div>
+      <div class="card">
+        <h3 class="h h-amber">Bayes (odds form)</h3>
+        <p class="small">prior_odds = p/(1−p) → post_odds = prior_odds × LR → post_p = post_odds/(1+post_odds).</p>
+      </div>
+      <div class="card">
+        <h3 class="h h-violet">Autopsy harmonization model</h3>
+        <p class="small">Let PET have Se<sub>P</sub>, Sp<sub>P</sub> vs autopsy. For a test B reported vs PET with LR<sub>+</sub>, LR<sub>−</sub> (thus Se<sub>B|P</sub>, Sp<sub>B|P</sub>), we solve for Se<sub>B</sub>, Sp<sub>B</sub> vs autopsy via PPV/NPV(PET) at a chosen prevalence and conditional independence (B ⟂ PET | disease). Then LR<sub>+</sub>=Se<sub>B</sub>/(1−Sp<sub>B</sub>), LR<sub>−</sub>=(1−Se<sub>B</sub>)/Sp<sub>B</sub>.</p>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script>
+function showTab(which){
+  const ids = ['dx','prog','bridge','about'];
+  ids.forEach(id=>{
+    const p = document.getElementById('panel-'+id);
+    const b = document.getElementById('tab'+id.charAt(0).toUpperCase()+id.slice(1));
+    if(!p||!b) return;
+    const on = (id===which);
+    p.style.display = on ? 'block' : 'none';
+    b.setAttribute('aria-selected', on ? 'true' : 'false');
+  });
+}
+if('serviceWorker' in navigator){ addEventListener('load',()=> navigator.serviceWorker.register('./sw.js')); }
+</script>
+<script src="app.js"></script>
+</body>
+</html>

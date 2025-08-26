@@ -325,15 +325,23 @@ function computeAutopsyPosteriors(prior0, Avals, useB){
   const catA = Avals.catA;
 
   function renderA(p,msg){
-    document.getElementById("post_aut_p1").textContent = `Posterior P(A+) = ${fmtPct(p)}`;
+  document.getElementById("post_aut_p1").textContent = `Posterior P(A+) = ${fmtPct(p)}`;
+  document.getElementById("post_aut_details1").innerHTML = msg;
+  setAutopsyChip("chip_aut1", p);
+  window.__POSTERIOR_AUTOPSY__ = p;
+}`;
     document.getElementById("post_aut_details1").innerHTML = msg;
-    setAutopsyChip("chip_aut1", p);
+    const [b,l] = interpretP(p); /* replaced */
     window.__POSTERIOR_AUTOPSY__ = p;
   }
   function renderAB(p,msg){
-    document.getElementById("post_aut_p2").textContent = `Posterior P(A+) = ${fmtPct(p)}`;
+  document.getElementById("post_aut_p2").textContent = `Posterior P(A+) = ${fmtPct(p)}`;
+  document.getElementById("post_aut_details2").innerHTML = msg;
+  setAutopsyChip("chip_aut2", p);
+  window.__POSTERIOR_AUTOPSY__ = p;
+}`;
     document.getElementById("post_aut_details2").innerHTML = msg;
-    setAutopsyChip("chip_aut2", p);
+    const [b,l] = interpretP(p); /* replaced */
     window.__POSTERIOR_AUTOPSY__ = p;
   }
 
@@ -411,125 +419,11 @@ document.getElementById("calc_dx").addEventListener("click", computeDiagnostic);
 ["age","stage","apoe"].forEach(id => document.getElementById(id).addEventListener("input", updateAutoPrior));
 document.getElementById("calc_prog").addEventListener("click", computePrognostic);
 
+document.getElementById("bridgeA").addEventListener("click",()=>doBridge("bridgeA"));
+document.getElementById("bridgeB").addEventListener("click",()=>doBridge("bridgeB"));
+document.getElementById("bridgeBoth").addEventListener("click",()=>{ doBridge("bridgeA"); doBridge("bridgeB"); });
 
 updateAutoPrior(); computeDiagnostic();
-
-// Mode toggle functionality
-document.getElementById("advancedMode").addEventListener("change", function(e) {
-  if (e.target.checked) {
-    document.body.classList.add("advanced-mode");
-    localStorage.setItem("advancedMode", "true");
-  } else {
-    document.body.classList.remove("advanced-mode");
-    localStorage.setItem("advancedMode", "false");
-  }
-});
-
-// Restore mode preference
-if (localStorage.getItem("advancedMode") === "true") {
-  document.getElementById("advancedMode").checked = true;
-  document.body.classList.add("advanced-mode");
-}
-
-// Enhanced result display with plain language
-function generatePlainLanguage(probability, isAutopsy = false) {
-  if (!isFinite(probability)) return "";
-  
-  const percent = Math.round(probability * 100);
-  const substrate = isAutopsy ? "autopsy-confirmed amyloid pathology" : "PET-positive amyloid";
-  
-  if (probability >= 0.90) {
-    return `There is a very high probability (${percent}%) that this patient has ${substrate}. Consider proceeding with amyloid-targeted interventions if clinically appropriate.`;
-  } else if (probability >= 0.70) {
-    return `There is a high probability (${percent}%) that this patient has ${substrate}. Additional clinical correlation may be helpful.`;
-  } else if (probability >= 0.30) {
-    return `The probability of ${substrate} is intermediate (${percent}%). Consider additional testing or clinical follow-up.`;
-  } else if (probability >= 0.10) {
-    return `There is a low probability (${percent}%) that this patient has ${substrate}. Amyloid pathology is unlikely but not ruled out.`;
-  } else {
-    return `There is a very low probability (${percent}%) that this patient has ${substrate}. Amyloid pathology is very unlikely.`;
-  }
-}
-
-// Enhanced setChip function with plain language
-const originalSetChip = window.setChip;
-window.setChip = function(elId, bucket, label) {
-  originalSetChip(elId, bucket, label);
-  
-  // Add plain language interpretation
-  const chipNum = elId.match(/\d+/)?.[0] || "";
-  const isAutopsy = elId.includes("aut");
-  const plainLangId = isAutopsy ? `plain_language_aut${chipNum}` : `plain_language${chipNum}`;
-  const plainLangEl = document.getElementById(plainLangId);
-  
-  if (plainLangEl) {
-    const probability = isAutopsy ? window.__POSTERIOR_AUTOPSY__ : window.__POSTERIOR__;
-    if (typeof probability === "number") {
-      plainLangEl.textContent = generatePlainLanguage(probability, isAutopsy);
-    }
-  }
-};
-
-// PDF Export functionality
-function generatePDF() {
-  const results = {
-    age: document.getElementById("age").value,
-    stage: document.getElementById("stage").value,
-    apoe: document.getElementById("apoe").value,
-    testA: document.getElementById("modA").options[document.getElementById("modA").selectedIndex].text,
-    catA: document.getElementById("catA").value,
-    testB: document.getElementById("useB").value === "yes" ? document.getElementById("modB").options[document.getElementById("modB").selectedIndex].text : null,
-    catB: document.getElementById("useB").value === "yes" ? document.getElementById("catB").value : null,
-    petPosterior: window.__POSTERIOR__,
-    autopsyPosterior: window.__POSTERIOR_AUTOPSY__,
-    timestamp: new Date().toISOString()
-  };
-  
-  // Create PDF content
-  const content = `
-BAYESIAN AMYLOID HELPER - RESULTS REPORT
-Generated: ${new Date().toLocaleString()}
-
-PATIENT CONTEXT:
-Age: ${results.age} years
-Cognitive Stage: ${results.stage}
-APOE Genotype: ${results.apoe || 'Unknown'}
-
-TEST RESULTS:
-Primary Test: ${results.testA} - ${results.catA}
-${results.testB ? `Secondary Test: ${results.testB} - ${results.catB}` : 'No secondary test'}
-
-PROBABILITY ESTIMATES:
-PET-Referenced Posterior: ${results.petPosterior ? (results.petPosterior * 100).toFixed(1) + '%' : 'Not calculated'}
-Autopsy-Anchored Posterior: ${results.autopsyPosterior ? (results.autopsyPosterior * 100).toFixed(1) + '%' : 'Not calculated'}
-
-CLINICAL INTERPRETATION:
-${results.autopsyPosterior ? generatePlainLanguage(results.autopsyPosterior, true) : generatePlainLanguage(results.petPosterior, false)}
-
-DISCLAIMER:
-This tool is for educational purposes only. Results should not be used for clinical decision-making without proper medical supervision and interpretation.
-  `.trim();
-  
-  // Create downloadable text file (simple PDF alternative)
-  const blob = new Blob([content], { type: 'text/plain' });
-  const url = window.URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `amyloid-calculation-${new Date().toISOString().slice(0,10)}.txt`;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  window.URL.revokeObjectURL(url);
-}
-
-document.getElementById("export_pdf").addEventListener("click", generatePDF);
-
-// Show export button after calculation
-const originalComputeDiagnostic = computeDiagnostic;
-window.computeDiagnostic = function() {
-  originalComputeDiagnostic();
-  document.getElementById("export_pdf").style.display = "inline-block";
-};
 
 // Apply defaults from TEST_LIBRARY into the LR inputs
 function applyDefaultsFor(prefix){

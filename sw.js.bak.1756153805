@@ -1,0 +1,35 @@
+
+const CACHE='amyloid-helper-v209';
+const ASSETS=['./','./index.html','./styles.css','./app.js','./manifest.webmanifest'];
+self.addEventListener('install',e=>{e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS)));self.skipWaiting();});
+self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(keys=>Promise.all(keys.map(k=>k!==CACHE?caches.delete(k):null))));self.clients.claim();});
+// ===== BEGIN: Safe fetch handler (injected) =====
+self.addEventListener('fetch', function(event) {
+  try {
+    const url = new URL(event.request.url);
+    const isHTTP = (url.protocol === 'http:' || url.protocol === 'https:');
+    const sameOrigin = (url.origin === self.origin || url.origin === self.location.origin);
+    if (event.request.method !== 'GET' || !isHTTP || !sameOrigin) {
+      return; // Don't intercept non-GET, non-http(s), or cross-origin (e.g., chrome-extension://)
+    }
+    event.respondWith(
+      caches.match(event.request).then(function(resp) {
+        if (resp) return resp;
+        return fetch(event.request).then(function(networkResp) {
+          try {
+            const copy = networkResp.clone();
+            // Try to detect an existing cache name; fallback if undefined.
+            const CACHE_NAME = (typeof CACHE !== 'undefined' && CACHE) ? CACHE : 'ptau217-cache-v1';
+            caches.open(CACHE_NAME).then(function(cache) { cache.put(event.request, copy); });
+          } catch (e) {
+            // swallow
+          }
+          return networkResp;
+        });
+      })
+    );
+  } catch (e) {
+    // noop
+  }
+});
+// ===== END: Safe fetch handler (injected) =====

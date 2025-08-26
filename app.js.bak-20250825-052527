@@ -7,8 +7,6 @@ addEventListener("online",updateOnline); addEventListener("offline",updateOnline
 // Utilities
 const clamp=(x,lo,hi)=>Math.max(lo,Math.min(hi,x));
 const toOdds=p=>p/(1-p), fromOdds=o=>o/(1+o);
-// Colour thresholds used for chip buckets (both PET and autopsy layers)
-const COLOR_THRESHOLDS = { green:0.90, amber:0.70, grey:0.30, red:0.10 };
 function lerp(x,x0,y0,x1,y1){ if(x<=x0)return y0; if(x>=x1)return y1; const t=(x-x0)/(x1-x0); return y0+t*(y1-y0); }
 function fmtPct(x){ if(!isFinite(x)) return "—"; const p=x*100; return p<0.1? p.toFixed(2)+"%": p.toFixed(1)+"%"; }
 
@@ -118,30 +116,7 @@ function updateAutoPrior(){
 
 // As-entered Diagnostic calc + PPV/NPV
 function lrForCategory(cat,vals){ return cat==="pos"?vals.pos : (cat==="indet"?vals.indet : vals.neg); }
-
-// Autopsy-specific chip labels
-function labelAutopsy(p){
-  // label text only (chip color still driven by bucket from interpretP)
-  if (!isFinite(p)) return "—";
-  if (p >= 0.90) return "High probability of autopsy A+";
-  if (p >= 0.70) return "Likely autopsy A+";
-  if (p <= 0.10) return "Low probability of autopsy A+";
-  if (p <= 0.30) return "Likely autopsy A−";
-  return "Indeterminate on autopsy scale";
-}
-
-
-function interpretP(p){
-  if(!isFinite(p)) return ["muted","—"];
-  const T = COLOR_THRESHOLDS;
-  if(p >= T.green) return ["good","High likelihood of PET positivity"];
-  if(p >= T.amber) return ["warn","Likely PET positivity"];
-  if(p <= T.red)   return ["bad","Low likelihood of PET positivity"];
-  if(p <= T.grey)  return ["warn","Likely PET negative"];
-  return ["muted","Indeterminate"];
-}
-
-
+function interpretP(p){ if(p>=0.90) return ["high","High likelihood of PET positivity"]; if(p>=0.70) return ["likely","Likely PET positivity"]; if(p>0.30) return ["mid","Indeterminate range"]; if(p>0.10) return ["low","Likely PET negative"]; return ["low","Low probability"]; }
 function setChip(elId, bucket, label){ const el=document.getElementById(elId); if(!el) return; el.className="chip " + bucket; el.textContent = label; }
 
 
@@ -212,7 +187,6 @@ function computeDiagnostic(){
     const [b2,lab2] = interpretP(qAB); setChip("chip2", b2, lab2);
   } else {
     document.getElementById("post_details2").innerHTML = "";
-    showTriage("triage_flag2", qAB);
   }
 
   // Keep PET layer for reference
@@ -324,16 +298,16 @@ function computeAutopsyPosteriors(prior0, Avals, useB){
   const modA = document.getElementById("modA").value;
   const catA = Avals.catA;
 
-  function renderA(p,msg){
+  function renderA(p, msg){
     document.getElementById("post_aut_p1").textContent = `Posterior P(A+) = ${fmtPct(p)}`;
     document.getElementById("post_aut_details1").innerHTML = msg;
-    setAutopsyChip("chip_aut1", p);
+    const [b,l] = interpretP(p); setChip("chip_aut1", b, l);
     window.__POSTERIOR_AUTOPSY__ = p;
   }
-  function renderAB(p,msg){
+  function renderAB(p, msg){
     document.getElementById("post_aut_p2").textContent = `Posterior P(A+) = ${fmtPct(p)}`;
     document.getElementById("post_aut_details2").innerHTML = msg;
-    setAutopsyChip("chip_aut2", p);
+    const [b,l] = interpretP(p); setChip("chip_aut2", b, l);
     window.__POSTERIOR_AUTOPSY__ = p;
   }
 
@@ -411,125 +385,11 @@ document.getElementById("calc_dx").addEventListener("click", computeDiagnostic);
 ["age","stage","apoe"].forEach(id => document.getElementById(id).addEventListener("input", updateAutoPrior));
 document.getElementById("calc_prog").addEventListener("click", computePrognostic);
 
+document.getElementById("bridgeA").addEventListener("click",()=>doBridge("bridgeA"));
+document.getElementById("bridgeB").addEventListener("click",()=>doBridge("bridgeB"));
+document.getElementById("bridgeBoth").addEventListener("click",()=>{ doBridge("bridgeA"); doBridge("bridgeB"); });
 
 updateAutoPrior(); computeDiagnostic();
-
-// Mode toggle functionality
-document.getElementById("advancedMode").addEventListener("change", function(e) {
-  if (e.target.checked) {
-    document.body.classList.add("advanced-mode");
-    localStorage.setItem("advancedMode", "true");
-  } else {
-    document.body.classList.remove("advanced-mode");
-    localStorage.setItem("advancedMode", "false");
-  }
-});
-
-// Restore mode preference
-if (localStorage.getItem("advancedMode") === "true") {
-  document.getElementById("advancedMode").checked = true;
-  document.body.classList.add("advanced-mode");
-}
-
-// Enhanced result display with plain language
-function generatePlainLanguage(probability, isAutopsy = false) {
-  if (!isFinite(probability)) return "";
-  
-  const percent = Math.round(probability * 100);
-  const substrate = isAutopsy ? "autopsy-confirmed amyloid pathology" : "PET-positive amyloid";
-  
-  if (probability >= 0.90) {
-    return `There is a very high probability (${percent}%) that this patient has ${substrate}. Consider proceeding with amyloid-targeted interventions if clinically appropriate.`;
-  } else if (probability >= 0.70) {
-    return `There is a high probability (${percent}%) that this patient has ${substrate}. Additional clinical correlation may be helpful.`;
-  } else if (probability >= 0.30) {
-    return `The probability of ${substrate} is intermediate (${percent}%). Consider additional testing or clinical follow-up.`;
-  } else if (probability >= 0.10) {
-    return `There is a low probability (${percent}%) that this patient has ${substrate}. Amyloid pathology is unlikely but not ruled out.`;
-  } else {
-    return `There is a very low probability (${percent}%) that this patient has ${substrate}. Amyloid pathology is very unlikely.`;
-  }
-}
-
-// Enhanced setChip function with plain language
-const originalSetChip = window.setChip;
-window.setChip = function(elId, bucket, label) {
-  originalSetChip(elId, bucket, label);
-  
-  // Add plain language interpretation
-  const chipNum = elId.match(/\d+/)?.[0] || "";
-  const isAutopsy = elId.includes("aut");
-  const plainLangId = isAutopsy ? `plain_language_aut${chipNum}` : `plain_language${chipNum}`;
-  const plainLangEl = document.getElementById(plainLangId);
-  
-  if (plainLangEl) {
-    const probability = isAutopsy ? window.__POSTERIOR_AUTOPSY__ : window.__POSTERIOR__;
-    if (typeof probability === "number") {
-      plainLangEl.textContent = generatePlainLanguage(probability, isAutopsy);
-    }
-  }
-};
-
-// PDF Export functionality
-function generatePDF() {
-  const results = {
-    age: document.getElementById("age").value,
-    stage: document.getElementById("stage").value,
-    apoe: document.getElementById("apoe").value,
-    testA: document.getElementById("modA").options[document.getElementById("modA").selectedIndex].text,
-    catA: document.getElementById("catA").value,
-    testB: document.getElementById("useB").value === "yes" ? document.getElementById("modB").options[document.getElementById("modB").selectedIndex].text : null,
-    catB: document.getElementById("useB").value === "yes" ? document.getElementById("catB").value : null,
-    petPosterior: window.__POSTERIOR__,
-    autopsyPosterior: window.__POSTERIOR_AUTOPSY__,
-    timestamp: new Date().toISOString()
-  };
-  
-  // Create PDF content
-  const content = `
-BAYESIAN AMYLOID HELPER - RESULTS REPORT
-Generated: ${new Date().toLocaleString()}
-
-PATIENT CONTEXT:
-Age: ${results.age} years
-Cognitive Stage: ${results.stage}
-APOE Genotype: ${results.apoe || 'Unknown'}
-
-TEST RESULTS:
-Primary Test: ${results.testA} - ${results.catA}
-${results.testB ? `Secondary Test: ${results.testB} - ${results.catB}` : 'No secondary test'}
-
-PROBABILITY ESTIMATES:
-PET-Referenced Posterior: ${results.petPosterior ? (results.petPosterior * 100).toFixed(1) + '%' : 'Not calculated'}
-Autopsy-Anchored Posterior: ${results.autopsyPosterior ? (results.autopsyPosterior * 100).toFixed(1) + '%' : 'Not calculated'}
-
-CLINICAL INTERPRETATION:
-${results.autopsyPosterior ? generatePlainLanguage(results.autopsyPosterior, true) : generatePlainLanguage(results.petPosterior, false)}
-
-DISCLAIMER:
-This tool is for educational purposes only. Results should not be used for clinical decision-making without proper medical supervision and interpretation.
-  `.trim();
-  
-  // Create downloadable text file (simple PDF alternative)
-  const blob = new Blob([content], { type: 'text/plain' });
-  const url = window.URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `amyloid-calculation-${new Date().toISOString().slice(0,10)}.txt`;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  window.URL.revokeObjectURL(url);
-}
-
-document.getElementById("export_pdf").addEventListener("click", generatePDF);
-
-// Show export button after calculation
-const originalComputeDiagnostic = computeDiagnostic;
-window.computeDiagnostic = function() {
-  originalComputeDiagnostic();
-  document.getElementById("export_pdf").style.display = "inline-block";
-};
 
 // Apply defaults from TEST_LIBRARY into the LR inputs
 function applyDefaultsFor(prefix){
@@ -555,52 +415,4 @@ window.addEventListener("load", ()=>{
   const b = document.getElementById("modB");
   if(a){ a.addEventListener("change", ()=>applyDefaultsFor("A")); applyDefaultsFor("A"); }
   if(b){ b.addEventListener("change", ()=>applyDefaultsFor("B")); }
-});
-
-function setAutopsyChip(id, p){
-  const [bucket, _] = interpretP(p);
-  const lab = labelAutopsy(p);
-  setChip(id, bucket, lab);
-}
-
-// --- Therapy triage helpers ---
-function getTriageCutoff(){
-  const el = document.getElementById("triage_thresh");
-  let v = el ? Number(el.value) : 0.80;
-  if(!isFinite(v) || v<=0 || v>=1) v = 0.80;
-  return v;
-}
-function triageFlag(prob){
-  const thr = getTriageCutoff();
-  return { meets: prob >= thr, thr };
-}
-function showTriage(id, prob){
-  const spanId = id; // use a pill appended to the details line
-  const thr = getTriageCutoff();
-  // ensure a span exists right after the details node
-  const details = document.getElementById(id.replace("triage_flag","post_details"));
-  let pill = document.getElementById(spanId);
-  if(!pill){
-    pill = document.createElement("span");
-    pill.id = spanId;
-    pill.className = "pill";
-    pill.style.marginLeft = "8px";
-    if(details) details.appendChild(pill);
-  }
-  if(prob >= thr){
-    pill.textContent = `Meets therapy triage (≥ ${Math.round(thr*100)}%)`;
-  } else {
-    pill.textContent = `Below triage (${Math.round(thr*100)}% cut-off)`;
-  }
-}
-window.addEventListener("load", ()=>{
-  const btn90 = document.getElementById("triage_quick90");
-  if(btn90){
-    btn90.addEventListener("click", ()=>{
-      const el = document.getElementById("triage_thresh");
-      if(el){ el.value = "0.90"; }
-      // recompute if possible
-      try{ computeDiagnostic(); }catch(e){}
-    });
-  }
 });

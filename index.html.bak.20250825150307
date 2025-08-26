@@ -41,19 +41,7 @@
 
   <!-- Diagnostic -->
   <section id="panel-dx" class="tab card">
-    <div class="mode-toggle-container">
-      <h2 class="h section-gradient">Diagnostic: Sequential Bayes (A then optional B)</h2>
-      <div class="mode-toggle">
-        <label class="mode-switch">
-          <input type="checkbox" id="advancedMode" aria-label="Toggle advanced mode">
-          <span class="mode-slider"></span>
-          <span class="mode-label">Advanced</span>
-        </label>
-        <div class="mode-help">
-          <span class="tooltip" data-tooltip="Simple mode shows only essential inputs. Advanced mode exposes all parameters for customization.">?</span>
-        </div>
-      </div>
-    </div>
+    <h2 class="h section-gradient">Diagnostic: Sequential Bayes (A then optional B)</h2>
     <div class="grid">
       <div class="card">
         <h3 class="h h-blue">Clinical context</h3>
@@ -66,32 +54,22 @@
           <option value="MCI" selected>Mild cognitive impairment (MCI)</option>
           <option value="DEM">Dementia (etiology uncertain)</option>
         </select>
-        <div class="advanced-only">
-          <label>APOE genotype (optional)
-            <span class="tooltip" data-tooltip="APOE ε4 alleles increase amyloid risk. ε2 alleles may be protective.">?</span>
-          </label>
-          <select id="apoe">
-            <option value="unknown" selected>Unknown / not tested</option>
-            <option value="e2e2">ε2/ε2</option>
-            <option value="e2e3">ε2/ε3</option>
-            <option value="e2e4">ε2/ε4</option>
-            <option value="e3e3">ε3/ε3</option>
-            <option value="e3e4">ε3/ε4</option>
-            <option value="e4e4">ε4/ε4</option>
-          </select>
-        </div>
+        <label>APOE genotype (optional)</label>
+        <select id="apoe">
+          <option value="unknown" selected>Unknown / not tested</option>
+          <option value="e2e2">ε2/ε2</option>
+          <option value="e2e3">ε2/ε3</option>
+          <option value="e2e4">ε2/ε4</option>
+          <option value="e3e3">ε3/ε3</option>
+          <option value="e3e4">ε3/ε4</option>
+          <option value="e4e4">ε4/ε4</option>
+        </select>
         <div class="hr"></div>
-        <div class="advanced-only">
-          <h3 class="h h-teal">Prior</h3>
-          <label>Auto prior (read-only)
-            <span class="tooltip" data-tooltip="Calculated from age, cognitive stage, and APOE genotype based on population studies.">?</span>
-          </label>
-          <input type="number" id="auto_prior" readonly value="0.700" />
-          <label>Override prior (0–1, optional)
-            <span class="tooltip" data-tooltip="Use this to specify a custom prior probability if you have additional clinical information.">?</span>
-          </label>
-          <input type="number" id="prior_override" min="0" max="1" step="0.001" placeholder="Leave blank to use auto prior">
-        </div>
+        <h3 class="h h-teal">Prior</h3>
+        <label>Auto prior (read-only)</label>
+        <input type="number" id="auto_prior" readonly value="0.700" />
+        <label>Override prior (0–1, optional)</label>
+        <input type="number" id="prior_override" min="0" max="1" step="0.001" placeholder="Leave blank to use auto prior">
       </div>
 
       <div class="card">
@@ -117,20 +95,12 @@
           <option value="indet">Indeterminate</option>
           <option value="neg">Negative</option>
         </select>
-        <div class="advanced-only">
-          <div class="grid tight">
-            <div><label>LR<sub>+</sub> (A+)
-              <span class="tooltip" data-tooltip="Likelihood ratio for positive test results. Higher values indicate better diagnostic performance.">?</span>
-            </label><input type="number" id="lrA_pos" step="0.01"></div>
-            <div><label>LR (Indet)
-              <span class="tooltip" data-tooltip="Likelihood ratio for indeterminate test results. Usually close to 1.0 (no diagnostic information).">?</span>
-            </label><input type="number" id="lrA_indet" step="0.01"></div>
-            <div><label>LR<sub>-</sub> (A−)
-              <span class="tooltip" data-tooltip="Likelihood ratio for negative test results. Lower values indicate better rule-out performance.">?</span>
-            </label><input type="number" id="lrA_neg" step="0.001"></div>
-          </div>
-          <div class="row"><button class="btn" id="defaultsA">Reset Test A to defaults</button></div>
+        <div class="grid tight">
+          <div><label>LR<sub>+</sub> (A+)</label><input type="number" id="lrA_pos" step="0.01"></div>
+          <div><label>LR (Indet)</label><input type="number" id="lrA_indet" step="0.01"></div>
+          <div><label>LR<sub>-</sub> (A−)</label><input type="number" id="lrA_neg" step="0.001"></div>
         </div>
+        <div class="row"><button class="btn" id="defaultsA">Reset Test A to defaults</button></div>
       </div>
 
       <div class="card">
@@ -162,83 +132,43 @@
             <option value="indet">Indeterminate</option>
             <option value="neg">Negative</option>
           </select>
-          <div class="advanced-only">
-            <div class="grid tight">
-              <div><label>LR<sub>+</sub> (B+)
-                <span class="tooltip" data-tooltip="Likelihood ratio for positive test results. Higher values indicate better diagnostic performance.">?</span>
-              </label><input type="number" id="lrB_pos" step="0.01"></div>
-              <div><label>LR (Indet)
-                <span class="tooltip" data-tooltip="Likelihood ratio for indeterminate test results. Usually close to 1.0 (no diagnostic information).">?</span>
-              </label><input type="number" id="lrB_indet" step="0.01"></div>
-              <div><label>LR<sub>-</sub> (B−)
-                <span class="tooltip" data-tooltip="Likelihood ratio for negative test results. Lower values indicate better rule-out performance.">?</span>
-              </label><input type="number" id="lrB_neg" step="0.001"></div>
-            </div>
-            <div class="row"><button class="btn" id="defaultsB">Reset Test B to defaults</button></div>
+          <div class="grid tight">
+            <div><label>LR<sub>+</sub> (B+)</label><input type="number" id="lrB_pos" step="0.01"></div>
+            <div><label>LR (Indet)</label><input type="number" id="lrB_indet" step="0.01"></div>
+            <div><label>LR<sub>-</sub> (B−)</label><input type="number" id="lrB_neg" step="0.001"></div>
           </div>
+          <div class="row"><button class="btn" id="defaultsB">Reset Test B to defaults</button></div>
         </div>
       </div>
     </div>
 
     <div class="row">
-      <button class="btn primary" id="calc_dx" aria-describedby="calc-help">Compute posterior(s)</button>
-      <button class="btn secondary" id="export_pdf" aria-label="Export results as PDF" style="display:none">📄 Export PDF</button>
-      <div class="advanced-only">
-        <label class="small"><input type="checkbox" id="uncert"> Show uncertainty (Test A LR CIs only)</label>
-      </div>
-    </div>
-    <div id="calc-help" class="small muted" style="margin-top: 8px;">
-      Results will show both PET-referenced and autopsy-anchored probability estimates.
+      <button class="btn" id="calc_dx">Compute posterior(s)</button>
+      <label class="small"><input type="checkbox" id="uncert"> Show uncertainty (Test A LR CIs only)</label>
     </div>
 
     <!-- As-entered posteriors -->
     <div class="card result-card">
       <h3 class="h">PET layer after Test A — P(PET+)</h3>
-      <div class="result-container">
-        <div id="post_p1" class="result big-gradient">—</div>
-        <div id="confidence_bar1" class="confidence-bar" style="display:none">
-          <div class="confidence-range"></div>
-        </div>
-      </div>
+      <div id="post_p1" class="result big-gradient">—</div>
       <div id="chip1" class="chip">—</div>
-      <div class="result-interpretation">
-        <div class="small muted" id="post_details1"></div>
-        <div class="confidence-text small muted" id="confidence_text1" style="display:none"></div>
-        <div class="plain-language" id="plain_language1"></div>
-      </div>
+      <div class="small muted" id="post_details1"></div>
     </div>
 
     <div id="comboBlock" class="card result-card" style="display:none">
       <h3 class="h">PET layer after Test A → Test B — P(PET+)</h3>
-      <div class="result-container">
-        <div id="post_p2" class="result big-gradient">—</div>
-        <div id="confidence_bar2" class="confidence-bar" style="display:none">
-          <div class="confidence-range"></div>
-        </div>
-      </div>
+      <div id="post_p2" class="result big-gradient">—</div>
       <div id="chip2" class="chip">—</div>
-      <div class="result-interpretation">
-        <div class="small muted" id="post_details2"></div>
-        <div class="confidence-text small muted" id="confidence_text2" style="display:none"></div>
-        <div class="plain-language" id="plain_language2"></div>
-      </div>
+      <div class="small muted" id="post_details2"></div>
     </div>
 
     <!-- Autopsy harmonization settings (inline) -->
-    <div class="card advanced-only">
-      <h3 class="h h-teal">Autopsy harmonization (used to compute autopsy posterior)
-        <span class="tooltip" data-tooltip="These parameters control how PET-referenced test results are converted to autopsy-anchored probabilities.">?</span>
-      </h3>
+    <div class="card">
+      <h3 class="h h-teal">Autopsy harmonization (used to compute autopsy posterior)</h3>
       <div class="grid tight">
-        <div><label>PET Sensitivity vs autopsy
-          <span class="tooltip" data-tooltip="How often PET correctly identifies autopsy-positive cases (typically 0.90-0.95).">?</span>
-        </label><input type="number" id="pet_se_dx" min="0" max="1" step="0.001" value="0.92"></div>
-        <div><label>PET Specificity vs autopsy
-          <span class="tooltip" data-tooltip="How often PET correctly identifies autopsy-negative cases (typically 0.85-0.95).">?</span>
-        </label><input type="number" id="pet_sp_dx" min="0" max="1" step="0.001" value="0.90"></div>
-        <div><label>Prevalence for bridging (match B's cohort)
-          <span class="tooltip" data-tooltip="Population prevalence used to calibrate the PET-autopsy conversion (typically 0.3-0.7).">?</span>
-        </label><input type="number" id="pet_prev_dx" min="0.01" max="0.99" step="0.001" value="0.50"></div>
+        <div><label>PET Sensitivity vs autopsy</label><input type="number" id="pet_se_dx" min="0" max="1" step="0.001" value="0.92"></div>
+        <div><label>PET Specificity vs autopsy</label><input type="number" id="pet_sp_dx" min="0" max="1" step="0.001" value="0.90"></div>
+        <div><label>Prevalence for bridging (match B’s cohort)</label><input type="number" id="pet_prev_dx" min="0.01" max="0.99" step="0.001" value="0.50"></div>
       </div>
       <div class="small muted">We re-express Test A/B LRs (typically reported vs PET) onto the autopsy scale using these values.</div>
     </div>
@@ -246,32 +176,16 @@
     <!-- Autopsy-anchored posteriors -->
     <div class="card result-card">
       <h3 class="h">Autopsy layer after Test A — Posterior P(autopsy A+)</h3>
-      <div class="result-container">
-        <div id="post_aut_p1" class="result big-gradient">—</div>
-        <div id="confidence_bar_aut1" class="confidence-bar" style="display:none">
-          <div class="confidence-range"></div>
-        </div>
-      </div>
+      <div id="post_aut_p1" class="result big-gradient">—</div>
       <div id="chip_aut1" class="chip">—</div>
-      <div class="result-interpretation">
-        <div class="small muted" id="post_aut_details1"></div>
-        <div class="plain-language" id="plain_language_aut1"></div>
-      </div>
+      <div class="small muted" id="post_aut_details1"></div>
     </div>
 
     <div id="comboAutBlock" class="card result-card" style="display:none">
       <h3 class="h">Autopsy layer after Test A → Test B — Posterior P(autopsy A+)</h3>
-      <div class="result-container">
-        <div id="post_aut_p2" class="result big-gradient">—</div>
-        <div id="confidence_bar_aut2" class="confidence-bar" style="display:none">
-          <div class="confidence-range"></div>
-        </div>
-      </div>
+      <div id="post_aut_p2" class="result big-gradient">—</div>
       <div id="chip_aut2" class="chip">—</div>
-      <div class="result-interpretation">
-        <div class="small muted" id="post_aut_details2"></div>
-        <div class="plain-language" id="plain_language_aut2"></div>
-      </div>
+      <div class="small muted" id="post_aut_details2"></div>
     </div>
 
     <div class="callout small">Sequential Bayes assumes tests are independent given disease; correlation can attenuate effective LRs. Autopsy panel bridges PET-referenced LRs onto an autopsy reference.</div>
@@ -406,60 +320,5 @@ if('serviceWorker' in navigator){ addEventListener('load',()=> navigator.service
 </script>
 <script src="app.js"></script>
   <script src="overrides.js"></script>
-
-<!-- ===== BEGIN: Autopsy-Anchored Methods & Sources (injected) ===== -->
-<section id="autopsy-anchored-sources" style="margin:2rem 0; padding:1rem; border:1px solid #ddd; border-radius:12px;">
-  <h2 style="margin-top:0;">Autopsy‑Anchored Posterior: Methods & Sources</h2>
-  <details open>
-    <summary><strong>Method note (click to toggle)</strong></summary>
-    <p style="margin-top:0.5rem;">
-      We compute post‑test probabilities via Bayes in odds form using clinical priors (age, stage, ± APOE) and biomarker‑specific likelihood ratios (LRs) typically reported against in‑life references (Aβ‑PET or CSF). We then recalibrate from PET/CSF‑referenced log‑odds to an <em>autopsy‑anchored</em> posterior probability using published PET⇄autopsy performance (sensitivity/specificity) as a bridging step. 
-      <br><em>Assumption:</em> conditional independence of the Test and PET given autopsy status. When biomarkers are correlated, reduce the LR magnitude accordingly or use dependence‑aware fusion.
-    </p>
-  </details>
-
-  <details>
-    <summary><strong>Key sources (click to toggle)</strong></summary>
-    <ul style="line-height:1.4; margin-top:0.5rem;">
-      <li><strong>PET vs autopsy (ground truth):</strong>
-        <ul>
-          <li>Clark CM, et al. <em>Lancet Neurol</em>. 2012;11(8):669‑678. (Florbetapir vs autopsy)</li>
-          <li>Clark CM, et al. <em>JAMA</em>. 2011;305(3):275‑283. (Use of florbetapir PET)</li>
-          <li>Sabri O, et al. <em>Alzheimer’s Dement</em>. 2015;11(8):964‑974. (Florbetaben Phase 3)</li>
-        </ul>
-      </li>
-      <li><strong>CSF biomarkers vs PET (cross‑platform):</strong>
-        <ul>
-          <li>Leuzy A, et al. <em>Alzheimer’s Dement</em>. 2023. (Aβ42/40; Aβ42/p‑tau181 cut‑offs vs PET & ADNC)</li>
-          <li>Keshavan A, et al. <em>Alz Res Ther</em>. 2020;12:170. (Lumipulse vs established immunoassays; PET prediction)</li>
-          <li>Elecsys p‑tau181/Aβ42 ratio — routine use & PET association (2025 report).</li>
-        </ul>
-      </li>
-      <li><strong>Plasma Aβ42/40 vs PET:</strong>
-        <ul>
-          <li>Doecke JD, et al. <em>Neurology</em>. 2020;94(24):e2402‑e2412.</li>
-          <li>Schindler SE, et al. <em>Neurology</em>. 2019;93(17):e1647‑e1659.</li>
-          <li>Cheng L, et al. <em>Front Aging Neurosci</em>. 2022. (Systematic evidence)</li>
-          <li>Figdore DJ, et al. 2024. (Lumipulse plasma Aβ42/40 with CSF/PET comparators)</li>
-        </ul>
-      </li>
-      <li><strong>Plasma p‑tau (p‑tau217 / p‑tau181) vs PET/tau‑PET:</strong>
-        <ul>
-          <li>Palmqvist S, et al. <em>JAMA</em>. 2020;324(8):772‑781.</li>
-          <li>Ashton NJ, et al. <em>JAMA Neurol</em>. 2024. (Multicenter)</li>
-          <li>Barthélemy NR, et al. <em>Nat Med</em>. 2024. (Head‑to‑head with CSF)</li>
-        </ul>
-      </li>
-      <li><strong>Commercial panels (APS / PrecivityAD):</strong>
-        <ul>
-          <li>Kirmess KM, et al. <em>Diagnostics</em>. 2021;11(6):1021. (LC‑MS/MS; APS derivation)</li>
-          <li>Meyer MR, et al. <em>Alzheimer’s Dement</em>. 2024;20(5):3179‑3192. (PrecivityAD2 validation vs PET)</li>
-        </ul>
-      </li>
-    </ul>
-    <p style="font-size:0.95em;color:#555;">Defaults are illustrative; edit LR/priors per your lab/platform.</p>
-  </details>
-</section>
-<!-- ===== END: Autopsy-Anchored Methods & Sources (injected) ===== -->
 </body>
 </html>
