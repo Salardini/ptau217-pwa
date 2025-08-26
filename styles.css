@@ -102,6 +102,20 @@ button:focus-visible, input:focus-visible, select:focus-visible {
 .wizard-text{font-size:1rem;line-height:1.5;margin:16px 0}
 .wizard-footer{display:flex;justify-content:space-between;align-items:center;padding:20px;border-top:1px solid var(--border)}
 
+/* Wizard highlighting */
+.wizard-highlight-active{
+  position:relative;
+  z-index:999;
+  animation:wizard-pulse 2s infinite;
+  border:3px solid var(--blue) !important;
+  border-radius:8px !important;
+  box-shadow:0 0 20px rgba(96,165,250,0.5) !important;
+}
+@keyframes wizard-pulse {
+  0%, 100% { box-shadow: 0 0 20px rgba(96,165,250,0.5); }
+  50% { box-shadow: 0 0 30px rgba(96,165,250,0.8); }
+}
+
 /* Case Management */
 .case-controls{display:grid;gap:16px}
 .saved-cases label{display:block;margin-bottom:8px}

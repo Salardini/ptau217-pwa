@@ -542,50 +542,61 @@ const wizardSteps = [
   {
     title: "Welcome to Bayesian Amyloid Helper",
     text: "This tool calculates the probability of amyloid pathology using Bayesian statistics. We'll guide you through a typical calculation step by step.",
-    highlight: null,
+    target: null,
     action: null
   },
   {
     title: "Step 1: Clinical Context",
-    text: "First, let's set up the patient's clinical context. Age and cognitive stage are the most important factors for determining baseline risk.",
-    highlight: ".card:has(#age)",
+    text: "First, let's set up the patient's clinical context. Age and cognitive stage are the most important factors for determining baseline risk. Click here to enter the patient's age.",
+    target: "#age",
     action: () => {
-      document.getElementById("age").focus();
       document.getElementById("age").value = "73";
+      updateAutoPrior();
     }
   },
   {
-    title: "Step 2: Select Test",
-    text: "Now choose the biomarker test that was performed. Each test has different performance characteristics for detecting amyloid pathology.",
-    highlight: ".card:has(#modA)",
+    title: "Step 2: Cognitive Stage", 
+    text: "Now select the patient's cognitive stage. This affects the baseline probability of amyloid pathology.",
+    target: "#stage",
     action: () => {
-      document.getElementById("modA").focus();
+      document.getElementById("stage").value = "MCI";
+      updateAutoPrior();
+    }
+  },
+  {
+    title: "Step 3: Select Test",
+    text: "Choose the biomarker test that was performed. Each test has different performance characteristics for detecting amyloid pathology.",
+    target: "#modA",
+    action: () => {
       document.getElementById("modA").value = "plasma_ptau217_generic";
       setDefaults("A");
     }
   },
   {
-    title: "Step 3: Test Result",
+    title: "Step 4: Test Result",
     text: "Select whether the test result was positive, negative, or indeterminate. This determines which likelihood ratio will be used.",
-    highlight: "select#catA",
+    target: "#catA",
     action: () => {
-      document.getElementById("catA").focus();
       document.getElementById("catA").value = "pos";
     }
   },
   {
-    title: "Step 4: Calculate",
-    text: "Now let's compute the probability! The tool will show both PET-referenced and autopsy-anchored estimates with clinical interpretation.",
-    highlight: "#calc_dx",
+    title: "Step 5: Calculate",
+    text: "Now click to compute the probability! The tool will show both PET-referenced and autopsy-anchored estimates with clinical interpretation.",
+    target: "#calc_dx",
     action: () => {
-      document.getElementById("calc_dx").focus();
+      // Will be executed when user clicks the button
     }
   }
 ];
 
 let currentWizardStep = 0;
+let wizardHighlightElement = null;
 
 function startWizard() {
+  // Switch to diagnostic tab if not already there
+  showTab('dx');
+  
   document.getElementById("wizard-overlay").style.display = "flex";
   currentWizardStep = 0;
   updateWizardStep();
@@ -605,11 +616,34 @@ function updateWizardStep() {
   // Update button states
   document.getElementById("wizard-prev").disabled = currentWizardStep === 0;
   document.getElementById("wizard-next").textContent = 
-    currentWizardStep === wizardSteps.length - 1 ? "Finish" : "Next →";
+    currentWizardStep === wizardSteps.length - 1 ? "Finish" : "Next";
   
-  // Execute step action
-  if (step.action) {
-    setTimeout(step.action, 500);
+  // Remove previous highlight
+  if (wizardHighlightElement) {
+    wizardHighlightElement.classList.remove("wizard-highlight-active");
+    wizardHighlightElement = null;
+  }
+  
+  // Add highlight to target element
+  if (step.target) {
+    const targetEl = document.querySelector(step.target);
+    if (targetEl) {
+      targetEl.classList.add("wizard-highlight-active");
+      wizardHighlightElement = targetEl;
+      
+      // Scroll target into view
+      targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      
+      // Focus the element if it's an input
+      if (targetEl.tagName === 'INPUT' || targetEl.tagName === 'SELECT' || targetEl.tagName === 'BUTTON') {
+        setTimeout(() => targetEl.focus(), 500);
+      }
+    }
+  }
+  
+  // Execute step action for the last step or when there's no target interaction needed
+  if (step.action && (currentWizardStep < wizardSteps.length - 1)) {
+    setTimeout(step.action, 800);
   }
 }
 
@@ -631,6 +665,19 @@ function prevWizardStep() {
 
 function closeWizard() {
   document.getElementById("wizard-overlay").style.display = "none";
+  
+  // Remove any remaining highlights
+  if (wizardHighlightElement) {
+    wizardHighlightElement.classList.remove("wizard-highlight-active");
+    wizardHighlightElement = null;
+  }
+  
+  // Special handling for final step - trigger calculation
+  if (currentWizardStep === wizardSteps.length - 1) {
+    setTimeout(() => {
+      computeDiagnostic();
+    }, 500);
+  }
 }
 
 // Smart Suggestions System
@@ -736,6 +783,92 @@ function saveCaseData() {
   alert("Case saved successfully!");
 }
 
+function downloadCase() {
+  const caseId = document.getElementById("saved-cases-list").value;
+  if (!caseId) {
+    alert("Please select a case to download.");
+    return;
+  }
+  
+  const savedCases = JSON.parse(localStorage.getItem("savedCases") || "[]");
+  const caseData = savedCases.find(c => c.id === caseId);
+  if (!caseData) {
+    alert("Case not found.");
+    return;
+  }
+  
+  // Create downloadable JSON file
+  const dataStr = JSON.stringify(caseData, null, 2);
+  const blob = new Blob([dataStr], { type: 'application/json' });
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${caseData.name.replace(/[^a-z0-9]/gi, '_')}_${caseData.id}.json`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  window.URL.revokeObjectURL(url);
+}
+
+function importCase() {
+  document.getElementById("case-file-input").click();
+}
+
+function handleCaseFileImport(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const caseData = JSON.parse(e.target.result);
+      
+      // Validate case data structure
+      if (!caseData.data || !caseData.name || !caseData.timestamp) {
+        throw new Error("Invalid case file format");
+      }
+      
+      // Generate new ID to avoid conflicts
+      caseData.id = Date.now().toString();
+      caseData.name = caseData.name + " (Imported)";
+      
+      // Add to saved cases
+      const savedCases = JSON.parse(localStorage.getItem("savedCases") || "[]");
+      savedCases.push(caseData);
+      localStorage.setItem("savedCases", JSON.stringify(savedCases));
+      
+      updateSavedCasesList();
+      alert("Case imported successfully!");
+      
+    } catch (error) {
+      alert("Error importing case: " + error.message);
+    }
+    
+    // Clear the file input
+    event.target.value = "";
+  };
+  reader.readAsText(file);
+}
+
+function deleteCase() {
+  const caseId = document.getElementById("saved-cases-list").value;
+  if (!caseId) {
+    alert("Please select a case to delete.");
+    return;
+  }
+  
+  if (!confirm("Are you sure you want to delete this case?")) {
+    return;
+  }
+  
+  const savedCases = JSON.parse(localStorage.getItem("savedCases") || "[]");
+  const filteredCases = savedCases.filter(c => c.id !== caseId);
+  localStorage.setItem("savedCases", JSON.stringify(filteredCases));
+  
+  updateSavedCasesList();
+  alert("Case deleted successfully!");
+}
+
 function updateSavedCasesList() {
   const savedCases = JSON.parse(localStorage.getItem("savedCases") || "[]");
   const select = document.getElementById("saved-cases-list");
@@ -817,11 +950,17 @@ document.addEventListener("DOMContentLoaded", function() {
   document.getElementById("save_case").addEventListener("click", saveCaseData);
   document.getElementById("load-case").addEventListener("click", function() {
     const caseId = document.getElementById("saved-cases-list").value;
-    if (!caseId) return;
+    if (!caseId) {
+      alert("Please select a case to load.");
+      return;
+    }
     
     const savedCases = JSON.parse(localStorage.getItem("savedCases") || "[]");
     const case_item = savedCases.find(c => c.id === caseId);
-    if (!case_item) return;
+    if (!case_item) {
+      alert("Case not found.");
+      return;
+    }
     
     // Load case data
     Object.keys(case_item.data).forEach(key => {
@@ -833,7 +972,14 @@ document.addEventListener("DOMContentLoaded", function() {
     
     updateAutoPrior();
     computeDiagnostic();
+    alert("Case loaded successfully!");
   });
+  
+  // File-based case management
+  document.getElementById("export-case").addEventListener("click", downloadCase);
+  document.getElementById("import-case").addEventListener("click", importCase);
+  document.getElementById("delete-case").addEventListener("click", deleteCase);
+  document.getElementById("case-file-input").addEventListener("change", handleCaseFileImport);
   
   // What-if analysis
   document.getElementById("what_if").addEventListener("click", openWhatIfAnalysis);
